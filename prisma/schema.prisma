@@ -58,6 +58,10 @@ model RecruiterProfile {
   rating        Float         @default(0)
   balance       Int           @default(0) // сум, доступно к выводу
   subscriptionUntil DateTime?
+  bio           String?
+  specializations String[]    @default([])
+  regions       String[]      @default([])
+  yearsExperience Int?
   createdAt     DateTime      @default(now())
 
   userId        String        @unique
@@ -67,8 +71,24 @@ model RecruiterProfile {
   candidates     Candidate[]
   payoutsAsRecruiter Payout[]
   withdrawals    Withdrawal[]
+  reviews        Review[]
 
   @@map("recruiter_profiles")
+}
+
+model Review {
+  id          String   @id @default(cuid())
+  rating      Int      // 1-5
+  text        String?
+  createdAt   DateTime @default(now())
+
+  requestId   String   @unique
+  request     VacancyRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  recruiterId String
+  recruiter   RecruiterProfile @relation(fields: [recruiterId], references: [id], onDelete: Cascade)
+
+  @@map("reviews")
 }
 
 // ──────────────────────────────────────────────
@@ -95,6 +115,14 @@ enum ModerationStatus {
   REJECTED
 }
 
+enum TariffCategory {
+  JUNIOR
+  MIDDLE
+  SENIOR
+  LEAD
+  TOP_MANAGEMENT
+}
+
 model VacancyRequest {
   id            String            @id @default(cuid())
   title         String
@@ -105,11 +133,18 @@ model VacancyRequest {
   mode          RequestMode       @default(OPEN)
   status        RequestStatus     @default(MODERATION)
   moderation    ModerationStatus  @default(PENDING)
+  tariffCategory TariffCategory   @default(MIDDLE)
   exclusiveDays Int               @default(14)
   deadlineDays  Int               @default(45)
   guaranteeDays Int               @default(30)
-  rewardGross   Int               // вознаграждение работодателя, сум
+  rewardGross   Int               // полный тариф закрытия, сум
+  depositAmount Int               @default(0) // 15% тарифа, вносится при публикации
+  depositPaid   Boolean           @default(false)
+  depositRefundedAt DateTime?
   claimedAt     DateTime?
+  claimDeadline DateTime?         // claimedAt + exclusiveDays — дедлайн автовозврата
+  autoReleasedCount Int           @default(0) // сколько раз заявка "слетала" с рекрутера
+  boostedUntil  DateTime?
   createdAt     DateTime          @default(now())
 
   companyId     String
@@ -120,6 +155,7 @@ model VacancyRequest {
   questions     Question[]
   messages      Message[]
   payout        Payout?
+  review        Review?
   hiredCandidateId String?
 
   @@map("vacancy_requests")
@@ -157,6 +193,7 @@ model Message {
   text       String
   fromRole   Role
   createdAt  DateTime @default(now())
+  readAt     DateTime?
 
   requestId  String
   request    VacancyRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
