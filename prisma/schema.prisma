@@ -1,0 +1,251 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ──────────────────────────────────────────────
+// Пользователи и роли
+// ──────────────────────────────────────────────
+
+enum Role {
+  EMPLOYER
+  RECRUITER
+  ADMIN
+}
+
+enum RecruiterType {
+  SOLO
+  AGENCY
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  role         Role
+  createdAt    DateTime @default(now())
+
+  company           Company?
+  recruiterProfile  RecruiterProfile?
+
+  @@map("users")
+}
+
+model Company {
+  id        String   @id @default(cuid())
+  name      String
+  industry  String?
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  requests  VacancyRequest[]
+
+  @@map("companies")
+}
+
+model RecruiterProfile {
+  id            String        @id @default(cuid())
+  name          String
+  type          RecruiterType @default(SOLO)
+  verified      Boolean       @default(false)
+  rating        Float         @default(0)
+  balance       Int           @default(0) // сум, доступно к выводу
+  subscriptionUntil DateTime?
+  createdAt     DateTime      @default(now())
+
+  userId        String        @unique
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  participations RequestParticipant[]
+  candidates     Candidate[]
+  payoutsAsRecruiter Payout[]
+  withdrawals    Withdrawal[]
+
+  @@map("recruiter_profiles")
+}
+
+// ──────────────────────────────────────────────
+// Вакансии (заявки) и биржа
+// ──────────────────────────────────────────────
+
+enum RequestMode {
+  EXCLUSIVE
+  OPEN
+}
+
+enum RequestStatus {
+  DRAFT
+  MODERATION
+  OPEN
+  IN_PROGRESS
+  FILLED
+  CLOSED
+}
+
+enum ModerationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model VacancyRequest {
+  id            String            @id @default(cuid())
+  title         String
+  description   String
+  skills        String[]
+  salaryFrom    Int?
+  salaryTo      Int?
+  mode          RequestMode       @default(OPEN)
+  status        RequestStatus     @default(MODERATION)
+  moderation    ModerationStatus  @default(PENDING)
+  exclusiveDays Int               @default(14)
+  deadlineDays  Int               @default(45)
+  guaranteeDays Int               @default(30)
+  rewardGross   Int               // вознаграждение работодателя, сум
+  claimedAt     DateTime?
+  createdAt     DateTime          @default(now())
+
+  companyId     String
+  company       Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  participants  RequestParticipant[]
+  candidates    Candidate[]
+  questions     Question[]
+  messages      Message[]
+  payout        Payout?
+  hiredCandidateId String?
+
+  @@map("vacancy_requests")
+}
+
+// Рекрутер, взявший заявку (может быть несколько при OPEN режиме)
+model RequestParticipant {
+  id           String   @id @default(cuid())
+  joinedAt     DateTime @default(now())
+
+  requestId    String
+  request      VacancyRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  recruiterId  String
+  recruiter    RecruiterProfile @relation(fields: [recruiterId], references: [id], onDelete: Cascade)
+
+  @@unique([requestId, recruiterId])
+  @@map("request_participants")
+}
+
+model Question {
+  id         String   @id @default(cuid())
+  text       String
+  fromRole   Role
+  createdAt  DateTime @default(now())
+
+  requestId  String
+  request    VacancyRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@map("questions")
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  text       String
+  fromRole   Role
+  createdAt  DateTime @default(now())
+
+  requestId  String
+  request    VacancyRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  recruiterId String  // с каким рекрутером связан тред (для мульти-участников)
+
+  @@map("messages")
+}
+
+// ──────────────────────────────────────────────
+// Кандидаты и канбан
+// ──────────────────────────────────────────────
+
+enum KanbanStage {
+  NEW
+  SCREENING
+  INTERVIEW
+  OFFER
+  OFFER_ACCEPTED
+  HIRED
+  REJECTED
+}
+
+model Candidate {
+  id            String       @id @default(cuid())
+  name          String
+  profession    String?
+  skills        String[]
+  expSalary     Int?
+  searchStatus  String?      // active | passive | employed
+  source        String?
+  stage         KanbanStage  @default(NEW)
+  note          String?
+  createdAt     DateTime     @default(now())
+
+  recruiterId   String
+  recruiter     RecruiterProfile @relation(fields: [recruiterId], references: [id], onDelete: Cascade)
+
+  requestId     String?
+  request       VacancyRequest?  @relation(fields: [requestId], references: [id], onDelete: SetNull)
+
+  @@map("candidates")
+}
+
+// ──────────────────────────────────────────────
+// Финансы: эскроу, комиссия, выплаты
+// ──────────────────────────────────────────────
+
+enum PayoutStatus {
+  PENDING_INVOICE
+  IN_ESCROW
+  RELEASED
+  REFUNDED
+}
+
+model Payout {
+  id           String       @id @default(cuid())
+  gross        Int          // сумма вознаграждения, сум
+  commission   Int?         // комиссия платформы (15%), фиксируется при release
+  status       PayoutStatus @default(PENDING_INVOICE)
+  hireDate     DateTime     @default(now())
+  guaranteeUntil DateTime?
+  firstHalfReleasedAt  DateTime?
+  secondHalfReleasedAt DateTime?
+
+  requestId    String       @unique
+  request      VacancyRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  recruiterId  String
+  recruiter    RecruiterProfile @relation(fields: [recruiterId], references: [id], onDelete: Cascade)
+
+  @@map("payouts")
+}
+
+enum WithdrawalStatus {
+  PENDING
+  PAID
+  REJECTED
+}
+
+model Withdrawal {
+  id          String           @id @default(cuid())
+  amount      Int
+  status      WithdrawalStatus @default(PENDING)
+  requestedAt DateTime         @default(now())
+  paidAt      DateTime?
+
+  recruiterId String
+  recruiter   RecruiterProfile @relation(fields: [recruiterId], references: [id], onDelete: Cascade)
+
+  @@map("withdrawals")
+}
