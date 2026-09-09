@@ -1,7 +1,7 @@
 // Тарифная сетка "закрытия" вакансии — фиксированная сумма (сум) по категории.
 // Депозит при публикации = 15% тарифа. Комиссия платформы = 20% от тарифа при найме.
 
-export const TARIFFS: Record
+export const TARIFFS: Record<
   string,
   { label: string; amount: number; hint: string }
 > = {
