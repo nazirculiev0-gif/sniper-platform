@@ -127,7 +127,7 @@ export default async function RequestDetailPage({ params }: { params: { id: stri
         Опубликовано {fmtDate(request.createdAt)} · ЗП {fmtSum(request.salaryFrom)} – {fmtSum(request.salaryTo)}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 280px", gap: 24, alignItems: "start" }}>
+      <div className="request-layout" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 280px", gap: 24, alignItems: "start" }}>
         <RequestTabs
           overview={overview}
           questions={questions}
