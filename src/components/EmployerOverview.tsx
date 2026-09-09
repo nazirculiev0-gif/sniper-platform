@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Briefcase, Flame, UsersRound, CheckCircle2, Wallet } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import Top from "@/components/Top";
 import { TARIFFS } from "@/lib/tariffs";
@@ -36,17 +37,16 @@ export default async function EmployerOverview({ companyId }: { companyId: strin
     .filter((r) => r.depositPaid && !r.depositRefundedAt && r.status !== "FILLED" && r.status !== "CLOSED")
     .reduce((a, r) => a + r.depositAmount, 0);
 
-  const kpis = [
-    { n: allRequests.filter((r) => r.status === "OPEN").length, l: "На бирже" },
-    { n: allRequests.filter((r) => r.status === "IN_PROGRESS").length, l: "В работе у рекрутеров" },
-    { n: 0, l: "Кандидатов получено" }, // считаем ниже точнее
-    { n: allRequests.filter((r) => r.status === "FILLED").length, l: "Закрыто наймов" },
-  ];
-
   const totalCandidates = await prisma.candidate.count({
     where: { request: { companyId } },
   });
-  kpis[2].n = totalCandidates;
+
+  const kpis = [
+    { n: allRequests.filter((r) => r.status === "OPEN").length, l: "На бирже", icon: Briefcase, c: "#0091AE" },
+    { n: allRequests.filter((r) => r.status === "IN_PROGRESS").length, l: "В работе у рекрутеров", icon: Flame, c: "#D4003B" },
+    { n: totalCandidates, l: "Кандидатов получено", icon: UsersRound, c: "#7C3AED" },
+    { n: allRequests.filter((r) => r.status === "FILLED").length, l: "Закрыто наймов", icon: CheckCircle2, c: "#00A38C" },
+  ];
 
   return (
     <div>
@@ -58,7 +58,9 @@ export default async function EmployerOverview({ companyId }: { companyId: strin
 
       {depositHeld > 0 && (
         <div className="card card-p" style={{ marginBottom: 18, borderLeft: "4px solid var(--ok)", display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ width: 38, height: 38, borderRadius: 10, background: "var(--okbg)", color: "var(--ok)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>💰</div>
+          <div style={{ width: 38, height: 38, borderRadius: 10, background: "var(--okbg)", color: "var(--ok)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <Wallet size={19} />
+          </div>
           <div style={{ flex: 1 }}>
             <b className="sg">{fmtSum(depositHeld)} держится в депозите</b>
             <div className="mini muted">По заявкам с внесённым депозитом — выплата рекрутеру пройдёт без задержек. Подробности — в «Выплаты».</div>
@@ -68,9 +70,18 @@ export default async function EmployerOverview({ companyId }: { companyId: strin
       )}
 
       <div className="grid-kpi" style={{ marginBottom: 24 }}>
-        {kpis.map((k, i) => (
-          <div key={i} className="kpi"><div className="n" style={{ fontSize: 26 }}>{k.n}</div><div className="l">{k.l}</div></div>
-        ))}
+        {kpis.map((k, i) => {
+          const Icon = k.icon;
+          return (
+            <div key={i} className="kpi">
+              <div className="ic" style={{ background: k.c + "18", color: k.c }}>
+                <Icon size={19} />
+              </div>
+              <div className="n" style={{ fontSize: 26 }}>{k.n}</div>
+              <div className="l">{k.l}</div>
+            </div>
+          );
+        })}
       </div>
 
       <div className="sectit" style={{ fontSize: 15, marginBottom: 12 }}>Активные заявки</div>
@@ -83,7 +94,12 @@ export default async function EmployerOverview({ companyId }: { companyId: strin
           const st = STATUS_LABEL[r.status];
           const left = r.status === "IN_PROGRESS" ? daysLeft(r.claimDeadline) : null;
           return (
-            <Link key={r.id} href={`/dashboard/requests/${r.id}`} className="card card-p" style={{ textDecoration: "none", color: "inherit", display: "block" }}>
+            <Link
+              key={r.id}
+              href={`/dashboard/requests/${r.id}`}
+              className="card card-p card-hover"
+              style={{ textDecoration: "none", color: "inherit", display: "block" }}
+            >
               <div className="flex gap8" style={{ marginBottom: 10 }}>
                 <div className="av" style={{ width: 34, height: 34, fontSize: 13, background: "var(--dark)" }}>
                   {r.title.slice(0, 1).toUpperCase()}
