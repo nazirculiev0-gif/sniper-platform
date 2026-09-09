@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import VideoCallModal from "@/components/VideoCallModal";
 
 type ChatProps = {
   requestId: string;
@@ -15,6 +16,7 @@ export default function Chat({ requestId, role, participants, companyName }: Cha
   const [messages, setMessages] = useState<any[]>([]);
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
+  const [calling, setCalling] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
 
   const activeRecruiterId = role === "EMPLOYER" ? selRecruiter : undefined;
@@ -53,6 +55,19 @@ export default function Chat({ requestId, role, participants, companyName }: Cha
     }
   };
 
+  const endCall = async (seconds: number) => {
+    const mm = String(Math.floor(seconds / 60)).padStart(2, "0");
+    const ss = String(seconds % 60).padStart(2, "0");
+    const body: any = { text: `📹 Видеозвонок завершён · ${mm}:${ss}` };
+    if (role === "EMPLOYER") body.recruiterId = selRecruiter;
+    await fetch(`/api/requests/${requestId}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    load();
+  };
+
   if (role === "EMPLOYER" && !participants?.length) {
     return <div className="card card-p mini muted">Чат появится, как только рекрутер возьмёт заявку в работу.</div>;
   }
@@ -76,6 +91,9 @@ export default function Chat({ requestId, role, participants, companyName }: Cha
             Чат с {role === "EMPLOYER" ? participants?.[0]?.recruiter.name : companyName || "работодателем"}
           </h3>
         )}
+        <button className="btn btn-ghost btn-sm" style={{ marginLeft: "auto" }} onClick={() => setCalling(true)}>
+          📹 Видеозвонок
+        </button>
       </div>
       <div ref={boxRef} style={{ maxHeight: 340, minHeight: 160, overflowY: "auto", padding: 14, display: "grid", gap: 8 }}>
         {messages.length === 0 && <div className="mini muted">Сообщений пока нет — начните разговор.</div>}
@@ -112,6 +130,13 @@ export default function Chat({ requestId, role, participants, companyName }: Cha
         />
         <button className="btn btn-red btn-sm" disabled={loading} onClick={send}>Отправить</button>
       </div>
+      {calling && (
+        <VideoCallModal
+          name={role === "EMPLOYER" ? (participants?.find((p) => p.recruiterId === selRecruiter)?.recruiter.name ?? "Собеседник") : (companyName || "Собеседник")}
+          onClose={() => setCalling(false)}
+          onEnd={endCall}
+        />
+      )}
     </div>
   );
 }
