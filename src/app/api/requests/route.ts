@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/currentUser";
+import { TARIFFS, depositFor, EXCLUSIVE_DAYS, GUARANTEE_DAYS } from "@/lib/tariffs";
+import { releaseExpiredClaims } from "@/lib/autoRelease";
 
 // GET /api/requests
 // - EMPLOYER: только свои заявки
@@ -10,6 +12,8 @@ import { getCurrentUser } from "@/lib/currentUser";
 export async function GET() {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  await releaseExpiredClaims();
 
   let where: any = {};
   if (user.role === "EMPLOYER") {
@@ -44,13 +48,14 @@ const createSchema = z.object({
   salaryFrom: z.number().int().optional(),
   salaryTo: z.number().int().optional(),
   mode: z.enum(["EXCLUSIVE", "OPEN"]).default("OPEN"),
-  rewardGross: z.number().int().positive(),
-  exclusiveDays: z.number().int().default(14),
-  deadlineDays: z.number().int().default(45),
-  guaranteeDays: z.number().int().default(30),
+  tariffCategory: z.enum(["JUNIOR", "MIDDLE", "SENIOR", "LEAD", "TOP_MANAGEMENT"]),
+  guaranteeDays: z.number().int().default(GUARANTEE_DAYS),
 });
 
-// POST /api/requests — только работодатель. Уходит на модерацию.
+// POST /api/requests — только работодатель.
+// Тариф берётся из фиксированной сетки по категории, депозит = 15% и считается
+// внесённым сразу (эмуляция оплаты — в реальной системе здесь вызов Payme/Click).
+// После оплаты депозита заявка уходит на модерацию.
 export async function POST(req: Request) {
   const user = await getCurrentUser();
   if (!user || user.role !== "EMPLOYER") {
@@ -62,9 +67,23 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
+  const tariff = TARIFFS[parsed.data.tariffCategory];
+  const deposit = depositFor(tariff.amount);
+
   const request = await prisma.vacancyRequest.create({
     data: {
-      ...parsed.data,
+      title: parsed.data.title,
+      description: parsed.data.description,
+      skills: parsed.data.skills,
+      salaryFrom: parsed.data.salaryFrom,
+      salaryTo: parsed.data.salaryTo,
+      mode: parsed.data.mode,
+      tariffCategory: parsed.data.tariffCategory,
+      rewardGross: tariff.amount,
+      depositAmount: deposit,
+      depositPaid: true, // симуляция мгновенной оплаты депозита
+      exclusiveDays: EXCLUSIVE_DAYS,
+      guaranteeDays: parsed.data.guaranteeDays,
       companyId: user.company!.id,
       status: "MODERATION",
       moderation: "PENDING",
