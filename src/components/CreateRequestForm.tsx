@@ -8,9 +8,8 @@ function fmtSum(n: number) {
   return n.toLocaleString("ru-RU") + " сум";
 }
 
-export default function CreateRequestForm() {
+export default function CreateRequestForm({ forceOpen }: { forceOpen?: boolean } = {}) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
   const [step, setStep] = useState<"form" | "pay">("form");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -23,20 +22,8 @@ export default function CreateRequestForm() {
   const deposit = depositFor(tariff.amount);
 
   const reset = () => {
-    setOpen(false);
-    setStep("form");
-    setTitle("");
-    setDescription("");
-    setTariffCategory("MIDDLE");
+    router.push("/dashboard/requests");
   };
-
-  if (!open) {
-    return (
-      <button className="btn btn-red" onClick={() => setOpen(true)}>
-        + Создать заявку
-      </button>
-    );
-  }
 
   const goToPay = (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,8 +44,7 @@ export default function CreateRequestForm() {
       setError(JSON.stringify(data.error));
       return;
     }
-    reset();
-    router.refresh();
+    router.push("/dashboard/requests");
   };
 
   if (step === "pay") {
