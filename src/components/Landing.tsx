@@ -55,7 +55,7 @@ export default function Landing() {
       {/* Hero */}
       <div className="wrap" style={{ padding: "64px 26px 40px", textAlign: "center" }}>
         <span className="pill pill-red" style={{ marginBottom: 16 }}>Маркетплейс рекрутеров Узбекистана</span>
-        <h1 className="sg" style={{ fontSize: 40, fontWeight: 700, lineHeight: 1.15, margin: "16px 0", letterSpacing: "-0.01em" }}>
+        <h1 className="sg landing-hero-title" style={{ fontSize: 40, fontWeight: 700, lineHeight: 1.15, margin: "16px 0", letterSpacing: "-0.01em" }}>
           Работодатель платит только<br />за закрытую вакансию
         </h1>
         <p className="mini" style={{ fontSize: 15, color: "var(--mid)", maxWidth: 620, margin: "0 auto 28px", lineHeight: 1.6 }}>
