@@ -3,6 +3,14 @@ import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
+const TARIFFS: Record<string, number> = {
+  JUNIOR: 3_000_000,
+  MIDDLE: 6_000_000,
+  SENIOR: 10_000_000,
+  LEAD: 16_000_000,
+  TOP_MANAGEMENT: 25_000_000,
+};
+
 async function main() {
   const pass = await bcrypt.hash("password123", 10);
 
@@ -25,7 +33,18 @@ async function main() {
       email: "recruiter@demo.uz",
       passwordHash: pass,
       role: "RECRUITER",
-      recruiterProfile: { create: { name: "Алия Каримова", type: "SOLO", verified: true } },
+      recruiterProfile: {
+        create: {
+          name: "Алия Каримова",
+          type: "SOLO",
+          verified: true,
+          bio: "8 лет в IT-рекрутинге. Специализируюсь на backend и data-инженерах для fintech и e-commerce.",
+          specializations: ["IT", "Backend", "Data"],
+          regions: ["Ташкент"],
+          yearsExperience: 8,
+          rating: 4.7,
+        },
+      },
     },
     include: { recruiterProfile: true },
   });
@@ -36,6 +55,7 @@ async function main() {
     create: { email: "admin@demo.uz", passwordHash: pass, role: "ADMIN" },
   });
 
+  const senior = TARIFFS.SENIOR;
   await prisma.vacancyRequest.create({
     data: {
       title: "Senior Backend Developer (Node.js)",
@@ -46,7 +66,10 @@ async function main() {
       mode: "OPEN",
       status: "OPEN",
       moderation: "APPROVED",
-      rewardGross: 8000000,
+      tariffCategory: "SENIOR",
+      rewardGross: senior,
+      depositAmount: Math.round(senior * 0.15),
+      depositPaid: true,
       companyId: employer.company!.id,
     },
   });
@@ -77,8 +100,8 @@ async function main() {
   console.log("Seed done.");
   console.log("Логины (пароль у всех: password123):");
   console.log("  employer@demo.uz  — работодатель");
-  console.log("  recruiter@demo.uz — рекрутер");
-  console.log("  admin@demo.uz     — администратор (пока без отдельного UI, доступ через API)");
+  console.log("  recruiter@demo.uz — рекрутер (заполненный публичный профиль)");
+  console.log("  admin@demo.uz     — администратор");
 }
 
 main()
