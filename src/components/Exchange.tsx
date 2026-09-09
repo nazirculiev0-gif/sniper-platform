@@ -84,7 +84,7 @@ export default function Exchange({ requests, verified }: { requests: any[]; veri
         {filtered.map((r) => {
           const tariff = TARIFFS[r.tariffCategory as keyof typeof TARIFFS];
           return (
-            <div key={r.id} className="card card-p">
+            <div key={r.id} className="card card-p card-hover">
               <div className="flex gap8" style={{ marginBottom: 10 }}>
                 <div className="av" style={{ width: 34, height: 34, fontSize: 13, background: "var(--info)" }}>
                   {r.company?.name?.slice(0, 1).toUpperCase()}
