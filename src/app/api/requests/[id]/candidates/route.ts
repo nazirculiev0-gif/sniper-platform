@@ -9,6 +9,7 @@ const schema = z.object({
   skills: z.array(z.string()).default([]),
   expSalary: z.number().int().optional(),
   source: z.string().optional(),
+  stage: z.enum(["NEW", "SCREENING", "INTERVIEW", "OFFER", "OFFER_ACCEPTED"]).default("NEW"),
 });
 
 // POST /api/requests/:id/candidates — рекрутер добавляет кандидата в канбан заявки
@@ -40,7 +41,6 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       ...parsed.data,
       recruiterId: user.recruiterProfile.id,
       requestId: params.id,
-      stage: "NEW",
     },
   });
 
