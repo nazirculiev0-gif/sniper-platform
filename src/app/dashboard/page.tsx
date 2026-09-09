@@ -30,6 +30,15 @@ export default async function DashboardPage() {
 
   return (
     <div>
+      {user.role === "RECRUITER" && !user.recruiterProfile?.verified && (
+        <div className="card card-p" style={{ marginBottom: 18, borderLeft: "4px solid var(--warn)", display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ width: 38, height: 38, borderRadius: 10, background: "var(--warnbg)", color: "var(--warn)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>⏳</div>
+          <div>
+            <b className="sg">Требуется верификация</b>
+            <div className="mini muted">Администратор ещё не подтвердил ваш аккаунт — доступ к бирже откроется после проверки.</div>
+          </div>
+        </div>
+      )}
       {user.role === "EMPLOYER" && (
         <div style={{ marginBottom: 20 }}>
           <div className="card-h" style={{ border: "none", padding: "0 0 10px" }}>
