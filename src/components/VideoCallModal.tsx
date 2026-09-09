@@ -62,4 +62,30 @@ export default function VideoCallModal({
             </div>
           )}
         </div>
-        <div style={{ padding: 16, display: "flex", justifyContent: "center", gap: 12, background: "#1b212b"
+        <div style={{ padding: 16, display: "flex", justifyContent: "center", gap: 12, background: "#1b212b" }}>
+          <button
+            onClick={() => setMic(!mic)}
+            style={{ width: 46, height: 46, borderRadius: 99, border: "none", cursor: "pointer", background: mic ? "rgba(255,255,255,.1)" : "#fff", color: mic ? "#fff" : "#1b212b" }}
+          >
+            {mic ? "🎙" : "🔇"}
+          </button>
+          <button
+            onClick={() => setCam(!cam)}
+            style={{ width: 46, height: 46, borderRadius: 99, border: "none", cursor: "pointer", background: cam ? "rgba(255,255,255,.1)" : "#fff", color: cam ? "#fff" : "#1b212b" }}
+          >
+            {cam ? "📹" : "🚫"}
+          </button>
+          <button
+            onClick={end}
+            style={{ width: 46, height: 46, borderRadius: 99, border: "none", cursor: "pointer", background: "var(--red)", color: "#fff", fontSize: 18 }}
+          >
+            ✕
+          </button>
+        </div>
+        <div className="mini" style={{ textAlign: "center", padding: "0 16px 14px", color: "#6b7686" }}>
+          Звонок проходит внутри платформы — контакты сторон не раскрываются, во избежание обхода SNIPER.
+        </div>
+      </div>
+    </div>
+  );
+}
