@@ -2,8 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/currentUser";
-
-const COMMISSION_RATE = 0.15;
+import { commissionFor } from "@/lib/tariffs";
 
 const schema = z.object({ candidateId: z.string() });
 
@@ -40,7 +39,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     );
   }
 
-  const commission = Math.round(request.rewardGross * COMMISSION_RATE);
+  const commission = commissionFor(request.rewardGross);
   const guaranteeUntil = new Date();
   guaranteeUntil.setDate(guaranteeUntil.getDate() + request.guaranteeDays);
 
