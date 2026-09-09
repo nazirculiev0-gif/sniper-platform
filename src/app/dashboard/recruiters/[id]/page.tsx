@@ -85,7 +85,7 @@ export default async function RecruiterPublicProfile({ params }: { params: { id:
       {recruiter.reviews.length === 0 && (
         <div className="card card-p mini muted">Пока нет отзывов — появятся после первых закрытых вакансий.</div>
       )}
-      <div style={{ display: "grid", gap: 10 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 280px", gap: 24, alignItems: "start" }}>
         {recruiter.reviews.map((r) => (
           <div key={r.id} className="card card-p">
             <div className="flex" style={{ justifyContent: "space-between", marginBottom: 6 }}>
