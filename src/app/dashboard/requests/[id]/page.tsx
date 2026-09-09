@@ -3,11 +3,13 @@ import { notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib/currentUser";
 import { prisma } from "@/lib/prisma";
 import Kanban from "@/components/Kanban";
-import AddCandidateForm from "@/components/AddCandidateForm";
+import AddCandidateButton from "@/components/AddCandidateButton";
 import Chat from "@/components/Chat";
 import ReviewForm from "@/components/ReviewForm";
 import QATab from "@/components/QATab";
 import CloseRequestButton from "@/components/CloseRequestButton";
+import RequestTabs from "@/components/RequestTabs";
+import RequestSidePanel from "@/components/RequestSidePanel";
 import { TARIFFS } from "@/lib/tariffs";
 import { releaseExpiredClaims } from "@/lib/autoRelease";
 
@@ -16,10 +18,18 @@ function fmtSum(n?: number | null) {
   return n.toLocaleString("ru-RU") + " сум";
 }
 
-function daysLeft(deadline?: Date | null) {
-  if (!deadline) return null;
-  return Math.ceil((deadline.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+function fmtDate(d: Date) {
+  return d.toLocaleDateString("ru-RU");
 }
+
+const STATUS_LABEL: Record<string, { t: string; c: string }> = {
+  DRAFT: { t: "Черновик", c: "pill-mut" },
+  MODERATION: { t: "На модерации", c: "pill-warn" },
+  OPEN: { t: "На бирже", c: "pill-ok" },
+  IN_PROGRESS: { t: "В работе", c: "pill-info" },
+  FILLED: { t: "Найм закрыт", c: "pill-ok" },
+  CLOSED: { t: "Закрыта", c: "pill-mut" },
+};
 
 export default async function RequestDetailPage({ params }: { params: { id: string } }) {
   const user = await getCurrentUser();
@@ -44,94 +54,105 @@ export default async function RequestDetailPage({ params }: { params: { id: stri
     request.participants.some((p) => p.recruiterId === user.recruiterProfile?.id);
 
   const tariff = TARIFFS[request.tariffCategory as keyof typeof TARIFFS];
-  const left = daysLeft(request.claimDeadline);
+  const st = STATUS_LABEL[request.status];
+  const canEditKanban = user.role === "RECRUITER" && isParticipant;
+  const showChat = user.role === "EMPLOYER" || isParticipant;
+
+  const overview = (
+    <div className="card card-p">
+      <div className="sectit" style={{ fontSize: 14, marginBottom: 10 }}>Описание</div>
+      <p className="mini" style={{ lineHeight: 1.7, marginBottom: 18 }}>{request.description}</p>
+      {request.skills.length > 0 && (
+        <>
+          <div className="sectit" style={{ fontSize: 14, marginBottom: 10 }}>Ключевые навыки</div>
+          <div className="flex gap8 wrapf">
+            {request.skills.map((s) => <span key={s} className="tag">{s}</span>)}
+          </div>
+        </>
+      )}
+    </div>
+  );
+
+  const questions = <QATab requestId={request.id} role={user.role} />;
+
+  const candidates = (
+    <Kanban
+      requestId={request.id}
+      candidates={JSON.parse(JSON.stringify(request.candidates))}
+      role={user.role}
+      canEdit={canEditKanban}
+      canConfirmHire={user.role === "EMPLOYER"}
+      payoutExists={!!request.payout}
+      addButton={canEditKanban ? <AddCandidateButton requestId={request.id} /> : undefined}
+    />
+  );
+
+  const chat = showChat ? (
+    <Chat
+      requestId={request.id}
+      role={user.role}
+      companyName={request.company.name}
+      participants={JSON.parse(JSON.stringify(request.participants))}
+    />
+  ) : null;
 
   return (
     <div>
-      <div className="card card-p" style={{ marginBottom: 18 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-          <div>
-            <b className="sg" style={{ fontSize: 18 }}>{request.title}</b>
-            <div className="mini muted" style={{ marginTop: 4 }}>
-              {request.company.name} · {tariff?.label ?? request.tariffCategory}
-            </div>
-          </div>
-          <div style={{ textAlign: "right" }}>
-            <div className="sg" style={{ fontSize: 16, fontWeight: 700 }}>{fmtSum(request.rewardGross)}</div>
-            <div className="mini muted">Гарантия {request.guaranteeDays} дн.</div>
-            {user.role === "EMPLOYER" && request.status !== "FILLED" && request.status !== "CLOSED" && (
-              <div style={{ marginTop: 8 }}>
-                <CloseRequestButton requestId={request.id} />
-              </div>
-            )}
+      <div className="flex" style={{ justifyContent: "space-between", marginBottom: 4 }}>
+        <div>
+          <h1 className="sg" style={{ fontSize: 20, fontWeight: 700 }}>{request.title}</h1>
+          <div className="mini muted" style={{ marginTop: 2 }}>
+            {request.company.name} · {tariff?.label} · Ташкент
           </div>
         </div>
-        <p className="mini" style={{ marginTop: 12, lineHeight: 1.6 }}>{request.description}</p>
-
-        <div className="flex gap8 wrapf" style={{ marginTop: 14 }}>
-          {request.depositPaid && (
-            <span className="pill pill-info">Депозит {fmtSum(request.depositAmount)} внесён</span>
-          )}
-          {request.status === "IN_PROGRESS" && left !== null && (
-            <span className="pill pill-warn">
-              {left <= 0 ? "Дедлайн закрепления сегодня" : `${left} дн. до автовозврата на биржу`}
-            </span>
-          )}
-          {request.autoReleasedCount > 0 && (
-            <span className="pill pill-mut">Автовозвращалась на биржу: {request.autoReleasedCount} раз</span>
-          )}
-        </div>
-
-        {request.participants.length > 0 && (
-          <div className="flex gap8 wrapf" style={{ marginTop: 12 }}>
-            {request.participants.map((p) => (
-              <Link
-                key={p.recruiterId}
-                href={`/dashboard/recruiters/${p.recruiterId}`}
-                className="tag"
-                style={{ textDecoration: "none" }}
-              >
-                Рекрутер: {p.recruiter.name} ★{p.recruiter.rating.toFixed(1)}
-              </Link>
-            ))}
-          </div>
+        {user.role === "EMPLOYER" && request.status !== "FILLED" && request.status !== "CLOSED" && (
+          <CloseRequestButton requestId={request.id} />
         )}
       </div>
 
-      {user.role === "RECRUITER" && isParticipant && (
-        <div style={{ marginBottom: 14 }}>
-          <AddCandidateForm requestId={request.id} />
-        </div>
-      )}
-
-      <Kanban
-        requestId={request.id}
-        candidates={JSON.parse(JSON.stringify(request.candidates))}
-        role={user.role}
-        canEdit={user.role === "RECRUITER" && isParticipant}
-        canConfirmHire={user.role === "EMPLOYER"}
-        payoutExists={!!request.payout}
-      />
-
-      <div style={{ marginTop: 18 }}>
-        <div className="sectit" style={{ fontSize: 15, marginBottom: 10 }}>Вопросы по вакансии</div>
-        <QATab requestId={request.id} role={user.role} />
+      <div className="flex gap8 wrapf" style={{ margin: "14px 0 24px" }}>
+        <span className={`pill ${st.c}`}>{st.t}</span>
+        {request.mode === "EXCLUSIVE" && <span className="pill pill-red">Эксклюзив</span>}
+        {request.depositPaid && <span className="pill pill-ok">Депозит внесён · без задержек</span>}
+        {request.status === "IN_PROGRESS" && (
+          <span className="pill pill-warn">
+            {request.exclusiveDays} дн. эксклюзива
+          </span>
+        )}
+        {request.autoReleasedCount > 0 && (
+          <span className="pill pill-mut">Автовозврат: {request.autoReleasedCount}</span>
+        )}
+      </div>
+      <div className="mini muted" style={{ marginTop: -16, marginBottom: 20 }}>
+        Опубликовано {fmtDate(request.createdAt)} · ЗП {fmtSum(request.salaryFrom)} – {fmtSum(request.salaryTo)}
       </div>
 
-      {(user.role === "EMPLOYER" || isParticipant) && (
-        <div style={{ marginTop: 18 }}>
-          <div className="sectit" style={{ fontSize: 15, marginBottom: 10 }}>Чат по заявке</div>
-          <Chat
-            requestId={request.id}
-            role={user.role}
-            companyName={request.company.name}
-            participants={JSON.parse(JSON.stringify(request.participants))}
-          />
-        </div>
-      )}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 280px", gap: 24, alignItems: "start" }}>
+        <RequestTabs
+          overview={overview}
+          questions={questions}
+          questionsCount={0}
+          candidates={candidates}
+          candidatesCount={request.candidates.length}
+          chat={chat}
+          showChat={!!showChat}
+        />
+
+        <RequestSidePanel
+          requestId={request.id}
+          rewardGross={request.rewardGross}
+          exclusiveDays={request.exclusiveDays}
+          claimedAt={request.claimedAt?.toISOString() ?? null}
+          claimDeadline={request.claimDeadline?.toISOString() ?? null}
+          createdAt={request.createdAt.toISOString()}
+          participants={JSON.parse(JSON.stringify(request.participants))}
+          status={request.status}
+          canSimulate={user.role === "EMPLOYER" || isParticipant}
+        />
+      </div>
 
       {user.role === "EMPLOYER" && request.status === "FILLED" && request.payout && (
-        <div style={{ marginTop: 18 }}>
+        <div style={{ marginTop: 24 }}>
           <ReviewForm requestId={request.id} existing={request.review} />
         </div>
       )}
