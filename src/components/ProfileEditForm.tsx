@@ -22,8 +22,8 @@ export default function ProfileEditForm({ profile }: { profile: any }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         bio,
-        specializations: specializations.split(",").map((s) => s.trim()).filter(Boolean),
-        regions: regions.split(",").map((s) => s.trim()).filter(Boolean),
+        specializations: specializations.split(",").map((s: string) => s.trim()).filter(Boolean),
+        regions: regions.split(",").map((s: string) => s.trim()).filter(Boolean),
         yearsExperience: yearsExperience ? Number(yearsExperience) : undefined,
       }),
     });
