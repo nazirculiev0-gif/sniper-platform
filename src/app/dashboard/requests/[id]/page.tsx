@@ -1,128 +1,56 @@
-import Link from "next/link";
-import { notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib/currentUser";
 import { prisma } from "@/lib/prisma";
-import Kanban from "@/components/Kanban";
-import AddCandidateForm from "@/components/AddCandidateForm";
-import Chat from "@/components/Chat";
-import ReviewForm from "@/components/ReviewForm";
-import { TARIFFS } from "@/lib/tariffs";
+import RequestList from "@/components/RequestList";
+import CreateRequestForm from "@/components/CreateRequestForm";
 import { releaseExpiredClaims } from "@/lib/autoRelease";
 
-function fmtSum(n?: number | null) {
-  if (!n) return "—";
-  return n.toLocaleString("ru-RU") + " сум";
-}
-
-function daysLeft(deadline?: Date | null) {
-  if (!deadline) return null;
-  return Math.ceil((deadline.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-}
-
-export default async function RequestDetailPage({ params }: { params: { id: string } }) {
+export default async function DashboardPage() {
   const user = await getCurrentUser();
   if (!user) return null;
 
   await releaseExpiredClaims();
 
-  const request = await prisma.vacancyRequest.findUnique({
-    where: { id: params.id },
-    include: {
-      company: true,
-      candidates: true,
-      participants: { include: { recruiter: true } },
-      payout: true,
-      review: true,
-    },
+  let where: any = {};
+  if (user.role === "EMPLOYER") {
+    where = { companyId: user.company!.id };
+  } else if (user.role === "RECRUITER") {
+    where = {
+      OR: [
+        { status: { in: ["OPEN", "IN_PROGRESS"] }, moderation: "APPROVED" },
+        { participants: { some: { recruiterId: user.recruiterProfile!.id } } },
+      ],
+    };
+  }
+
+  const requests = await prisma.vacancyRequest.findMany({
+    where,
+    include: { company: true, participants: { include: { recruiter: true } } },
+    orderBy: { createdAt: "desc" },
   });
-  if (!request) notFound();
-
-  const isParticipant =
-    user.role === "RECRUITER" &&
-    request.participants.some((p) => p.recruiterId === user.recruiterProfile?.id);
-
-  const tariff = TARIFFS[request.tariffCategory as keyof typeof TARIFFS];
-  const left = daysLeft(request.claimDeadline);
 
   return (
     <div>
-      <div className="card card-p" style={{ marginBottom: 18 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+      {user.role === "RECRUITER" && !user.recruiterProfile?.verified && (
+        <div className="card card-p" style={{ marginBottom: 18, borderLeft: "4px solid var(--warn)", display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ width: 38, height: 38, borderRadius: 10, background: "var(--warnbg)", color: "var(--warn)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>⏳</div>
           <div>
-            <b className="sg" style={{ fontSize: 18 }}>{request.title}</b>
-            <div className="mini muted" style={{ marginTop: 4 }}>
-              {request.company.name} · {tariff?.label ?? request.tariffCategory}
-            </div>
-          </div>
-          <div style={{ textAlign: "right" }}>
-            <div className="sg" style={{ fontSize: 16, fontWeight: 700 }}>{fmtSum(request.rewardGross)}</div>
-            <div className="mini muted">Гарантия {request.guaranteeDays} дн.</div>
+            <b className="sg">Требуется верификация</b>
+            <div className="mini muted">Администратор ещё не подтвердил ваш аккаунт — доступ к бирже откроется после проверки.</div>
           </div>
         </div>
-        <p className="mini" style={{ marginTop: 12, lineHeight: 1.6 }}>{request.description}</p>
-
-        <div className="flex gap8 wrapf" style={{ marginTop: 14 }}>
-          {request.depositPaid && (
-            <span className="pill pill-info">Депозит {fmtSum(request.depositAmount)} внесён</span>
-          )}
-          {request.status === "IN_PROGRESS" && left !== null && (
-            <span className="pill pill-warn">
-              {left <= 0 ? "Дедлайн закрепления сегодня" : `${left} дн. до автовозврата на биржу`}
-            </span>
-          )}
-          {request.autoReleasedCount > 0 && (
-            <span className="pill pill-mut">Автовозвращалась на биржу: {request.autoReleasedCount} раз</span>
-          )}
-        </div>
-
-        {request.participants.length > 0 && (
-          <div className="flex gap8 wrapf" style={{ marginTop: 12 }}>
-            {request.participants.map((p) => (
-              <Link
-                key={p.recruiterId}
-                href={`/dashboard/recruiters/${p.recruiterId}`}
-                className="tag"
-                style={{ textDecoration: "none" }}
-              >
-                Рекрутер: {p.recruiter.name} ★{p.recruiter.rating.toFixed(1)}
-              </Link>
-            ))}
+      )}
+      {user.role === "EMPLOYER" && (
+        <div style={{ marginBottom: 20 }}>
+          <div className="card-h" style={{ border: "none", padding: "0 0 10px" }}>
+            <h3>Новая заявка</h3>
           </div>
-        )}
+          <CreateRequestForm />
+        </div>
+      )}
+      <div className="card-h" style={{ border: "none", padding: "0 0 10px" }}>
+        <h3>{user.role === "EMPLOYER" ? "Мои заявки" : user.role === "RECRUITER" ? "Биржа заявок" : "Все заявки"}</h3>
       </div>
-
-      {user.role === "RECRUITER" && isParticipant && (
-        <div style={{ marginBottom: 14 }}>
-          <AddCandidateForm requestId={request.id} />
-        </div>
-      )}
-
-      <Kanban
-        requestId={request.id}
-        candidates={JSON.parse(JSON.stringify(request.candidates))}
-        role={user.role}
-        canEdit={user.role === "RECRUITER" && isParticipant}
-        canConfirmHire={user.role === "EMPLOYER"}
-        payoutExists={!!request.payout}
-      />
-
-      {(user.role === "EMPLOYER" || isParticipant) && (
-        <div style={{ marginTop: 18 }}>
-          <div className="sectit" style={{ fontSize: 15, marginBottom: 10 }}>Чат по заявке</div>
-          <Chat
-            requestId={request.id}
-            role={user.role}
-            companyName={request.company.name}
-            participants={JSON.parse(JSON.stringify(request.participants))}
-          />
-        </div>
-      )}
-
-      {user.role === "EMPLOYER" && request.status === "FILLED" && request.payout && (
-        <div style={{ marginTop: 18 }}>
-          <ReviewForm requestId={request.id} existing={request.review} />
-        </div>
-      )}
+      <RequestList requests={JSON.parse(JSON.stringify(requests))} role={user.role} />
     </div>
   );
 }
