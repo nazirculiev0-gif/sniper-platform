@@ -20,7 +20,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <div className="shell">
       <div className="side">
         <Link href="/dashboard" className="side-logo">
-          <b>SNIP<i>E</i>R</b>
+          <b style={{ color: "#fff" }}>SNIP<span style={{ color: "var(--red)" }}>E</span>R</b>
         </Link>
         <div className="side-role">
           <div className="ic">{displayName.slice(0, 1).toUpperCase()}</div>
