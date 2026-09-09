@@ -1,0 +1,48 @@
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/currentUser";
+
+const schema = z.object({
+  name: z.string().min(2),
+  profession: z.string().optional(),
+  skills: z.array(z.string()).default([]),
+  expSalary: z.number().int().optional(),
+  source: z.string().optional(),
+});
+
+// POST /api/requests/:id/candidates — рекрутер добавляет кандидата в канбан заявки
+export async function POST(req: Request, { params }: { params: { id: string } }) {
+  const user = await getCurrentUser();
+  if (!user || user.role !== "RECRUITER" || !user.recruiterProfile) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const isParticipant = await prisma.requestParticipant.findUnique({
+    where: {
+      requestId_recruiterId: {
+        requestId: params.id,
+        recruiterId: user.recruiterProfile.id,
+      },
+    },
+  });
+  if (!isParticipant) {
+    return NextResponse.json({ error: "Вы не участник этой заявки" }, { status: 403 });
+  }
+
+  const parsed = schema.safeParse(await req.json());
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+  }
+
+  const candidate = await prisma.candidate.create({
+    data: {
+      ...parsed.data,
+      recruiterId: user.recruiterProfile.id,
+      requestId: params.id,
+      stage: "NEW",
+    },
+  });
+
+  return NextResponse.json(candidate, { status: 201 });
+}
