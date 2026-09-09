@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { TARIFFS } from "@/lib/tariffs";
 
 const STATUS_LABEL: Record<string, { t: string; c: string }> = {
   DRAFT: { t: "Черновик", c: "pill-mut" },
@@ -15,6 +16,12 @@ const STATUS_LABEL: Record<string, { t: string; c: string }> = {
 function fmtSum(n?: number | null) {
   if (!n) return "—";
   return n.toLocaleString("ru-RU") + " сум";
+}
+
+function daysLeft(deadline?: string | null) {
+  if (!deadline) return null;
+  const ms = new Date(deadline).getTime() - Date.now();
+  return Math.ceil(ms / (1000 * 60 * 60 * 24));
 }
 
 export default function RequestList({ requests, role }: { requests: any[]; role: string }) {
@@ -34,27 +41,4 @@ export default function RequestList({ requests, role }: { requests: any[]; role:
   }
 
   return (
-    <div style={{ display: "grid", gap: 10 }}>
-      {requests.map((r) => {
-        const st = STATUS_LABEL[r.status] || STATUS_LABEL.DRAFT;
-        return (
-          <div key={r.id} className="card card-p" style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <Link href={`/dashboard/requests/${r.id}`} style={{ color: "inherit", textDecoration: "none" }}>
-                <b className="sg" style={{ fontSize: 14.5 }}>{r.title}</b>
-              </Link>
-              <div className="mini muted" style={{ marginTop: 2 }}>
-                {r.company?.name} · {fmtSum(r.rewardGross)} · {r.mode === "EXCLUSIVE" ? "Эксклюзив" : "Открытая"}
-              </div>
-            </div>
-            <span className={`pill ${st.c}`}>{st.t}</span>
-            {role === "RECRUITER" && r.status === "OPEN" && (
-              <button className="btn btn-red btn-sm" onClick={() => take(r.id)}>Взять в работу</button>
-            )}
-            <Link href={`/dashboard/requests/${r.id}`} className="btn btn-ghost btn-sm">Открыть</Link>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
+    <div style={{ display:
