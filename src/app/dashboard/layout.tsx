@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getCurrentUser } from "@/lib/currentUser";
 import SidebarNav from "@/components/SidebarNav";
 import SignOutButton from "@/components/SignOutButton";
+import MobileSidebarWrapper from "@/components/MobileSidebarWrapper";
 
 const ROLE_LABEL: Record<string, string> = {
   EMPLOYER: "Работодатель",
@@ -18,7 +19,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <div className="shell">
-      <div className="side">
+      <MobileSidebarWrapper>
         <Link href="/dashboard" className="side-logo">
           <b style={{ color: "#fff" }}>SNIP<span style={{ color: "var(--red)" }}>E</span>R</b>
         </Link>
@@ -33,7 +34,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <div className="side-foot">
           <SignOutButton />
         </div>
-      </div>
+      </MobileSidebarWrapper>
       <div className="main">
         <div className="content"><div className="wrap">{children}</div></div>
       </div>
