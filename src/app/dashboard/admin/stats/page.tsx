@@ -1,3 +1,4 @@
+import { Wallet, TrendingUp, Building2, Users, ShieldCheck, Briefcase, CheckCircle2, Percent, Clock } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 
 function fmtSum(n?: number | null) {
@@ -42,14 +43,16 @@ export default async function AdminStatsPage() {
     totalRequests > 0 ? Math.round((filledRequests / totalRequests) * 100) : 0;
 
   const kpis = [
-    { n: totalEmployers, l: "Работодателей" },
-    { n: totalRecruiters, l: "Рекрутеров" },
-    { n: verifiedRecruiters, l: "Верифицированных рекрутеров" },
-    { n: totalRequests, l: "Всего заявок" },
-    { n: openRequests, l: "Открыто на бирже" },
-    { n: filledRequests, l: "Закрыто наймом" },
-    { n: `${conversionRate}%`, l: "Конверсия заявок в найм" },
-    { n: pendingModeration, l: "Ждут модерации" },
+    { n: fmtSum(gmv), l: "GMV — общий оборот", icon: TrendingUp, c: "#0091AE" },
+    { n: fmtSum(commissionEarned), l: "Заработано комиссии", icon: Wallet, c: "#00A38C" },
+    { n: totalEmployers, l: "Работодателей", icon: Building2, c: "#7C3AED" },
+    { n: totalRecruiters, l: "Рекрутеров", icon: Users, c: "#D4003B" },
+    { n: verifiedRecruiters, l: "Верифицированных рекрутеров", icon: ShieldCheck, c: "#00A38C" },
+    { n: totalRequests, l: "Всего заявок", icon: Briefcase, c: "#0091AE" },
+    { n: openRequests, l: "Открыто на бирже", icon: Briefcase, c: "#E8A33D" },
+    { n: filledRequests, l: "Закрыто наймом", icon: CheckCircle2, c: "#00A38C" },
+    { n: `${conversionRate}%`, l: "Конверсия заявок в найм", icon: Percent, c: "#7C3AED" },
+    { n: pendingModeration, l: "Ждут модерации", icon: Clock, c: "#E8A33D" },
   ];
 
   return (
@@ -59,11 +62,18 @@ export default async function AdminStatsPage() {
       </div>
 
       <div className="grid-kpi" style={{ marginBottom: 18 }}>
-        <div className="kpi"><div className="n" style={{ fontSize: 20 }}>{fmtSum(gmv)}</div><div className="l">GMV — общий оборот</div></div>
-        <div className="kpi"><div className="n" style={{ fontSize: 20 }}>{fmtSum(commissionEarned)}</div><div className="l">Заработано комиссии</div></div>
-        {kpis.slice(0, 6).map((k, i) => (
-          <div key={i} className="kpi"><div className="n" style={{ fontSize: 20 }}>{k.n}</div><div className="l">{k.l}</div></div>
-        ))}
+        {kpis.map((k, i) => {
+          const Icon = k.icon;
+          return (
+            <div key={i} className="kpi">
+              <div className="ic" style={{ background: k.c + "18", color: k.c }}>
+                <Icon size={19} />
+              </div>
+              <div className="n" style={{ fontSize: 20 }}>{k.n}</div>
+              <div className="l">{k.l}</div>
+            </div>
+          );
+        })}
       </div>
 
       <div className="sectit" style={{ fontSize: 15, marginBottom: 10 }}>Топ-5 рекрутеров по рейтингу</div>
