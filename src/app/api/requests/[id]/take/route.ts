@@ -11,6 +11,9 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
   if (!user || user.role !== "RECRUITER" || !user.recruiterProfile) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
+  if (!user.recruiterProfile.verified) {
+    return NextResponse.json({ error: "Дождитесь верификации аккаунта администратором" }, { status: 403 });
+  }
 
   const request = await prisma.vacancyRequest.findUnique({
     where: { id: params.id },
