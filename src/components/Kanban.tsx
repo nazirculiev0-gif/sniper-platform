@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import type { ReactNode } from "react";
 
 const STAGES: { k: string; t: string }[] = [
   { k: "NEW", t: "Новые" },
@@ -19,6 +20,7 @@ export default function Kanban({
   canEdit,
   canConfirmHire,
   payoutExists,
+  addButton,
 }: {
   requestId: string;
   candidates: any[];
@@ -26,6 +28,7 @@ export default function Kanban({
   canEdit: boolean;
   canConfirmHire: boolean;
   payoutExists: boolean;
+  addButton?: ReactNode;
 }) {
   const router = useRouter();
 
@@ -54,8 +57,13 @@ export default function Kanban({
   };
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: `repeat(${STAGES.length}, 1fr)`, gap: 10, overflowX: "auto" }}>
-      {STAGES.map((s) => {
+    <div>
+      <div className="flex" style={{ justifyContent: "space-between", marginBottom: 12 }}>
+        <div className="mini muted">Клик по карточке — полная карточка кандидата. Перетаскивайте между этапами или используйте стрелки.</div>
+        {addButton}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: `repeat(${STAGES.length}, 1fr)`, gap: 10, overflowX: "auto" }}>
+        {STAGES.map((s) => {
         const inStage = candidates.filter((c) => c.stage === s.k);
         const stageIdx = STAGES.findIndex((x) => x.k === s.k);
         return (
@@ -101,7 +109,8 @@ export default function Kanban({
             </div>
           </div>
         );
-      })}
+        })}
+      </div>
     </div>
   );
 }
