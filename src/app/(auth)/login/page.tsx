@@ -26,8 +26,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <form onSubmit={submit} className="card card-p" style={{ width: 360 }}>
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+      <form onSubmit={submit} className="card card-p" style={{ width: "100%", maxWidth: 360 }}>
         <div className="sg" style={{ fontSize: 22, fontWeight: 700, marginBottom: 4 }}>
           SNIPER<span style={{ color: "var(--red)" }}>.</span>
         </div>
