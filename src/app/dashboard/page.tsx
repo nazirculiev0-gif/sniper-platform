@@ -2,10 +2,13 @@ import { getCurrentUser } from "@/lib/currentUser";
 import { prisma } from "@/lib/prisma";
 import RequestList from "@/components/RequestList";
 import CreateRequestForm from "@/components/CreateRequestForm";
+import { releaseExpiredClaims } from "@/lib/autoRelease";
 
 export default async function DashboardPage() {
   const user = await getCurrentUser();
   if (!user) return null;
+
+  await releaseExpiredClaims();
 
   let where: any = {};
   if (user.role === "EMPLOYER") {
