@@ -26,6 +26,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             <nav className="flex gap8" style={{ marginLeft: "auto" }}>
               <a href="/dashboard" className="btn btn-ghost btn-sm">Биржа</a>
               <a href="/dashboard/candidates" className="btn btn-ghost btn-sm">Моя база</a>
+              <a href="/dashboard/profile" className="btn btn-ghost btn-sm">Профиль</a>
             </nav>
           )}
           {user.role === "ADMIN" && (
