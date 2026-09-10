@@ -41,7 +41,7 @@ export default async function RequestDetailPage({ params }: { params: { id: stri
     where: { id: params.id },
     include: {
       company: true,
-      candidates: true,
+      candidates: { include: { recruiter: { select: { name: true } } } },
       participants: { include: { recruiter: true } },
       payout: true,
       review: true,
@@ -84,6 +84,7 @@ export default async function RequestDetailPage({ params }: { params: { id: stri
       canConfirmHire={user.role === "EMPLOYER"}
       payoutExists={!!request.payout}
       addButton={canEditKanban ? <AddCandidateButton requestId={request.id} /> : undefined}
+      showRecruiter={user.role === "EMPLOYER" || request.participants.length > 1}
     />
   );
 
@@ -112,11 +113,19 @@ export default async function RequestDetailPage({ params }: { params: { id: stri
 
       <div className="flex gap8 wrapf" style={{ margin: "14px 0 24px" }}>
         <span className={`pill ${st.c}`}>{st.t}</span>
-        {request.mode === "EXCLUSIVE" && <span className="pill pill-red">Эксклюзив</span>}
-        {request.depositPaid && <span className="pill pill-ok">Депозит внесён · без задержек</span>}
+        {request.mode === "EXCLUSIVE" ? (
+          <span className="pill pill-red">Эксклюзив</span>
+        ) : (
+          <span className="pill pill-info">Открытая{request.participants.length > 0 ? ` · ${request.participants.length}` : ""}</span>
+        )}
+        {request.depositPaid ? (
+          <span className="pill pill-ok">Депозит внесён · без задержек</span>
+        ) : (
+          <span className="pill pill-mut">Без депозита</span>
+        )}
         {request.status === "IN_PROGRESS" && (
           <span className="pill pill-warn">
-            {request.exclusiveDays} дн. эксклюзива
+            {request.exclusiveDays} дн. до автовозврата на биржу
           </span>
         )}
         {request.autoReleasedCount > 0 && (
@@ -141,6 +150,7 @@ export default async function RequestDetailPage({ params }: { params: { id: stri
         <RequestSidePanel
           requestId={request.id}
           rewardGross={request.rewardGross}
+          mode={request.mode}
           exclusiveDays={request.exclusiveDays}
           claimedAt={request.claimedAt?.toISOString() ?? null}
           claimDeadline={request.claimDeadline?.toISOString() ?? null}
