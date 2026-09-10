@@ -34,7 +34,6 @@ export default function NotificationBell() {
   const [items, setItems] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [pos, setPos] = useState({ top: 0, right: 0 });
   const [mounted, setMounted] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -67,10 +66,6 @@ export default function NotificationBell() {
   }, []);
 
   const toggleOpen = () => {
-    if (!open && btnRef.current) {
-      const rect = btnRef.current.getBoundingClientRect();
-      setPos({ top: rect.bottom + 8, right: Math.max(8, window.innerWidth - rect.right) });
-    }
     setOpen((v) => !v);
   };
 
@@ -123,7 +118,7 @@ export default function NotificationBell() {
           ref={panelRef}
           className="card"
           style={{
-            position: "fixed", top: pos.top, right: pos.right, width: 340, maxWidth: "calc(100vw - 16px)",
+            position: "fixed", top: 16, right: 16, width: 340, maxWidth: "calc(100vw - 16px)",
             maxHeight: 420, overflowY: "auto", zIndex: 1000, boxShadow: "0 12px 32px rgba(0,0,0,.22)",
           }}
         >
