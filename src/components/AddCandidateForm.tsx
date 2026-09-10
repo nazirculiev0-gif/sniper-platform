@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 const SAMPLE_SKILLS = ["Node.js", "React", "SQL", "Английский B2", "Python", "Управление командой"];
@@ -17,47 +17,110 @@ function simulateParse(fileName: string) {
   };
 }
 
-export default function AddCandidateForm({ requestId }: { requestId: string }) {
+function fmtSum(n?: number | null) {
+  if (!n) return "—";
+  return n.toLocaleString("ru-RU") + " сум";
+}
+
+export default function AddCandidateModal({ requestId, onClose }: { requestId: string; onClose: () => void }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [tab, setTab] = useState<"base" | "new">("base");
+  const [base, setBase] = useState<any[]>([]);
+  const [loadingBase, setLoadingBase] = useState(true);
+
   const [name, setName] = useState("");
   const [profession, setProfession] = useState("");
+  const [expSalary, setExpSalary] = useState("");
   const [skills, setSkills] = useState<string[]>([]);
-  const [cvStatus, setCvStatus] = useState<"idle" | "parsing" | "done">("idle");
+  const [stage, setStage] = useState("NEW");
+  const [cvStatus, setCvStatus] = useState<"idle" | "parsing" | "done" | "error">("idle");
   const [fileName, setFileName] = useState("");
+  const [fileType, setFileType] = useState("");
+  const [fileData, setFileData] = useState("");
+  const [fileError, setFileError] = useState("");
   const [loading, setLoading] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
-  if (!open) {
-    return <button className="btn btn-soft btn-sm" onClick={() => setOpen(true)}>+ Добавить кандидата</button>;
-  }
+  const MAX_FILE_BYTES = 4 * 1024 * 1024; // 4 МБ
+
+  useEffect(() => {
+    fetch("/api/candidates/base")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data) => { setBase(data); setLoadingBase(false); });
+  }, []);
+
+  const addFromBase = async (candidateId: string) => {
+    setLoading(true);
+    const res = await fetch(`/api/requests/${requestId}/candidates/from-base`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ candidateId }),
+    });
+    setLoading(false);
+    if (res.ok) {
+      router.refresh();
+      onClose();
+    } else {
+      const data = await res.json();
+      alert(data.error || "Не удалось добавить кандидата");
+    }
+  };
 
   const handleFile = (file?: File) => {
     if (!file) return;
+    setFileError("");
+    if (file.size > MAX_FILE_BYTES) {
+      setFileError("Файл слишком большой — максимум 4 МБ");
+      setCvStatus("error");
+      return;
+    }
     setFileName(file.name);
+    setFileType(file.type);
     setCvStatus("parsing");
-    setTimeout(() => {
-      const parsed = simulateParse(file.name);
-      setName(parsed.name);
-      setProfession(parsed.profession);
-      setSkills(parsed.skills);
-      setCvStatus("done");
-    }, 1200);
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      const base64 = result.split(",")[1] ?? "";
+      // "Распознавание" полей — демо-симуляция; сам файл при этом сохраняется по-настоящему.
+      setTimeout(() => {
+        const parsed = simulateParse(file.name);
+        setName(parsed.name);
+        setProfession(parsed.profession);
+        setSkills(parsed.skills);
+        setFileData(base64);
+        setCvStatus("done");
+      }, 1200);
+    };
+    reader.onerror = () => {
+      setFileError("Не удалось прочитать файл");
+      setCvStatus("error");
+    };
+    reader.readAsDataURL(file);
   };
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const createAndAdd = async () => {
+    if (!name.trim()) return;
     setLoading(true);
     const res = await fetch(`/api/requests/${requestId}/candidates`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, profession, skills, source: fileName ? "Резюме (файл)" : "Вручную" }),
+      body: JSON.stringify({
+        name,
+        profession,
+        skills,
+        expSalary: expSalary ? Number(expSalary.replace(/\D/g, "")) : undefined,
+        source: fileName ? "Резюме (файл)" : "Вручную",
+        stage,
+        resumeFileName: fileName || undefined,
+        resumeFileType: fileType || undefined,
+        resumeFileData: fileData || undefined,
+      }),
     });
     setLoading(false);
     if (res.ok) {
-      setOpen(false);
-      setName(""); setProfession(""); setSkills([]); setCvStatus("idle"); setFileName("");
       router.refresh();
+      onClose();
     } else {
       const data = await res.json();
       alert(JSON.stringify(data.error));
@@ -65,65 +128,11 @@ export default function AddCandidateForm({ requestId }: { requestId: string }) {
   };
 
   return (
-    <form onSubmit={submit} className="card card-p" style={{ marginBottom: 10 }}>
-      <input
-        ref={fileInput}
-        type="file"
-        accept=".pdf,.doc,.docx,.txt"
-        style={{ display: "none" }}
-        onChange={(e) => handleFile(e.target.files?.[0])}
-      />
-      <div
-        onClick={() => fileInput.current?.click()}
-        style={{
-          border: "1.5px dashed var(--line)",
-          borderRadius: "var(--rs)",
-          padding: 16,
-          textAlign: "center",
-          cursor: "pointer",
-          marginBottom: 14,
-          background: cvStatus === "done" ? "var(--okbg)" : "var(--warm)",
-        }}
-      >
-        {cvStatus === "idle" && (
-          <>
-            <b className="mini">Загрузить резюме</b>
-            <div className="mini muted">PDF / Word — нажмите или перетащите файл. Поля заполнятся автоматически.</div>
-          </>
-        )}
-        {cvStatus === "parsing" && (
-          <>
-            <b className="mini">Анализируем резюме…</b>
-            <div className="mini muted">{fileName}</div>
-          </>
-        )}
-        {cvStatus === "done" && (
-          <>
-            <b className="mini" style={{ color: "var(--ok)" }}>Распознано ✓ поля заполнены</b>
-            <div className="mini muted">{fileName} — распознавание демонстрационное</div>
-          </>
-        )}
-      </div>
-
-      <div className="flex gap8" style={{ alignItems: "flex-end", marginBottom: 10 }}>
-        <label className="fld" style={{ marginBottom: 0, flex: 1 }}>
-          <span>Имя <em>*</em></span>
-          <input className="inp" required value={name} onChange={e => setName(e.target.value)} />
-        </label>
-        <label className="fld" style={{ marginBottom: 0, flex: 1 }}>
-          <span>Профессия</span>
-          <input className="inp" value={profession} onChange={e => setProfession(e.target.value)} />
-        </label>
-      </div>
-      {skills.length > 0 && (
-        <div className="flex gap8 wrapf" style={{ marginBottom: 10 }}>
-          {skills.map((s) => <span key={s} className="tag">{s}</span>)}
-        </div>
-      )}
-      <div className="flex gap8">
-        <button className="btn btn-red btn-sm" disabled={loading} type="submit">Добавить</button>
-        <button className="btn btn-ghost btn-sm" type="button" onClick={() => setOpen(false)}>Отмена</button>
-      </div>
-    </form>
-  );
-}
+    <div
+      style={{ position: "fixed", inset: 0, background: "rgba(20,24,30,.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: 16 }}
+      onClick={onClose}
+    >
+      <div className="card" style={{ width: "min(640px, 100%)", maxHeight: "85vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
+        <div className="card-h">
+          <h3 style={{ fontSize: 15 }}>Добавить кандидата в заявку</h3>
+          <button className="btn btn-ghost btn-sm" style={{ marginLeft:
