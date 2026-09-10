@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/currentUser";
+import { notifyCompany, notifyRecruiter } from "@/lib/notify";
 
 // GET /api/requests/:id/messages?recruiterId=xxx
 // Работодатель указывает recruiterId (может общаться с несколькими).
@@ -48,6 +49,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   }
 
   let recruiterId: string;
+  let requestTitle = "";
+  let companyId = "";
   if (user.role === "RECRUITER") {
     if (!user.recruiterProfile) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     recruiterId = user.recruiterProfile.id;
@@ -58,6 +61,12 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     if (!isParticipant) {
       return NextResponse.json({ error: "Вы не участник этой заявки" }, { status: 403 });
     }
+    const request = await prisma.vacancyRequest.findUnique({
+      where: { id: params.id },
+      select: { title: true, companyId: true },
+    });
+    requestTitle = request?.title ?? "";
+    companyId = request?.companyId ?? "";
   } else {
     if (!parsed.data.recruiterId) {
       return NextResponse.json({ error: "recruiterId обязателен для работодателя" }, { status: 400 });
@@ -68,6 +77,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     if (!request || request.companyId !== user.company?.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
+    requestTitle = request.title;
+    companyId = request.companyId;
   }
 
   const message = await prisma.message.create({
@@ -78,6 +89,25 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       fromRole: user.role,
     },
   });
+
+  const preview = parsed.data.text.length > 140 ? parsed.data.text.slice(0, 140) + "…" : parsed.data.text;
+  if (user.role === "RECRUITER") {
+    await notifyCompany(
+      companyId,
+      "MESSAGE",
+      `Новое сообщение по «${requestTitle}»`,
+      `${user.recruiterProfile!.name}: ${preview}`,
+      `/dashboard/requests/${params.id}`
+    );
+  } else {
+    await notifyRecruiter(
+      recruiterId,
+      "MESSAGE",
+      `Новое сообщение по «${requestTitle}»`,
+      `${user.company?.name ?? "Работодатель"}: ${preview}`,
+      `/dashboard/requests/${params.id}`
+    );
+  }
 
   return NextResponse.json(message, { status: 201 });
 }
