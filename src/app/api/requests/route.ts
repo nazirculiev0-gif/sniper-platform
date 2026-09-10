@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/currentUser";
 import { depositFor, EXCLUSIVE_DAYS, GUARANTEE_DAYS } from "@/lib/tariffs";
 import { releaseExpiredClaims } from "@/lib/autoRelease";
+import { notifyAdmins } from "@/lib/notify";
 
 // GET /api/requests
 // - EMPLOYER: только свои заявки
@@ -92,6 +93,13 @@ export async function POST(req: Request) {
       moderation: "PENDING",
     },
   });
+
+  await notifyAdmins(
+    "NEW_REQUEST_PENDING",
+    "Новая заявка на модерации",
+    `«${request.title}» от ${user.company!.name}`,
+    "/dashboard/admin/requests"
+  );
 
   return NextResponse.json(request, { status: 201 });
 }
