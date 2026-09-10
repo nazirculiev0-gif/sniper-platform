@@ -37,6 +37,22 @@ type CandidateFile = {
   createdAt: string;
 };
 
+type Interview = {
+  id: string;
+  scheduledAt: string;
+  format: string | null;
+  location: string | null;
+  notes: string | null;
+  status: "SCHEDULED" | "DONE" | "CANCELLED";
+  createdAt: string;
+};
+
+const INTERVIEW_STATUS_LABEL: Record<string, { t: string; c: string }> = {
+  SCHEDULED: { t: "Запланировано", c: "pill-info" },
+  DONE: { t: "Прошло", c: "pill-ok" },
+  CANCELLED: { t: "Отменено", c: "pill-mut" },
+};
+
 function fmtSum(n?: number | null) {
   if (!n) return "—";
   return n.toLocaleString("ru-RU") + " сум";
@@ -77,6 +93,16 @@ export default function CandidateDetailModal({
   const resumeInput = useRef<HTMLInputElement>(null);
   const otherInput = useRef<HTMLInputElement>(null);
 
+  const [interviews, setInterviews] = useState<Interview[]>([]);
+  const [interviewsLoading, setInterviewsLoading] = useState(true);
+  const [interviewError, setInterviewError] = useState("");
+  const [interviewSaving, setInterviewSaving] = useState(false);
+  const [showScheduleForm, setShowScheduleForm] = useState(false);
+  const [newWhen, setNewWhen] = useState("");
+  const [newFormat, setNewFormat] = useState("online");
+  const [newLocation, setNewLocation] = useState("");
+  const [newNotes, setNewNotes] = useState("");
+
   const searchStatus = candidate.searchStatus ? SEARCH_STATUS_LABEL[candidate.searchStatus] : null;
 
   useEffect(() => {
@@ -84,6 +110,10 @@ export default function CandidateDetailModal({
       .then((r) => (r.ok ? r.json() : []))
       .then((data) => setFiles(data))
       .finally(() => setFilesLoading(false));
+    fetch(`/api/candidates/${candidate.id}/interviews`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data) => setInterviews(data))
+      .finally(() => setInterviewsLoading(false));
   }, [candidate.id]);
 
   const openResume = async () => {
@@ -192,6 +222,65 @@ export default function CandidateDetailModal({
       setFileError("Не удалось прочитать файл");
     };
     reader.readAsDataURL(file);
+  };
+
+  const scheduleInterview = async () => {
+    if (!newWhen) {
+      setInterviewError("Укажите дату и время");
+      return;
+    }
+    setInterviewError("");
+    setInterviewSaving(true);
+    const res = await fetch(`/api/candidates/${candidate.id}/interviews`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        scheduledAt: new Date(newWhen).toISOString(),
+        format: newFormat || undefined,
+        location: newLocation || undefined,
+        notes: newNotes || undefined,
+      }),
+    });
+    setInterviewSaving(false);
+    if (res.ok) {
+      const created = await res.json();
+      setInterviews((prev) => [created, ...prev]);
+      setShowScheduleForm(false);
+      setNewWhen("");
+      setNewLocation("");
+      setNewNotes("");
+      router.refresh();
+    } else {
+      setInterviewError("Не удалось запланировать собеседование");
+    }
+  };
+
+  const cancelInterview = async (interview: Interview) => {
+    if (!confirm("Отменить это собеседование?")) return;
+    const res = await fetch(`/api/candidates/${candidate.id}/interviews/${interview.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "CANCELLED" }),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setInterviews((prev) => prev.map((i) => (i.id === updated.id ? updated : i)));
+      router.refresh();
+    } else {
+      setInterviewError("Не удалось отменить собеседование");
+    }
+  };
+
+  const markInterviewDone = async (interview: Interview) => {
+    const res = await fetch(`/api/candidates/${candidate.id}/interviews/${interview.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "DONE" }),
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setInterviews((prev) => prev.map((i) => (i.id === updated.id ? updated : i)));
+    }
   };
 
   const saveNote = async () => {
@@ -409,7 +498,77 @@ export default function CandidateDetailModal({
           )}
 
           {tab === "interviews" && (
-            <div className="mini muted">Планирование собеседований пока не реализовано. Договориться о звонке можно в чате заявки.</div>
+            <div>
+              {interviewsLoading && <div className="mini muted">Загрузка…</div>}
+              {!interviewsLoading && interviews.length === 0 && !showScheduleForm && (
+                <div className="mini muted" style={{ marginBottom: 10 }}>Собеседования пока не запланированы.</div>
+              )}
+              {!interviewsLoading && interviews.map((iv) => {
+                const st = INTERVIEW_STATUS_LABEL[iv.status];
+                const when = new Date(iv.scheduledAt).toLocaleString("ru-RU", {
+                  day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
+                });
+                return (
+                  <div key={iv.id} className="card card-p" style={{ marginBottom: 8 }}>
+                    <div className="flex gap8" style={{ alignItems: "flex-start" }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <b className="mini" style={{ display: "block" }}>{when}</b>
+                        <span className="mini muted">
+                          {iv.format || "Формат не указан"}{iv.location ? ` · ${iv.location}` : ""}
+                        </span>
+                        {iv.notes && <div className="mini muted" style={{ marginTop: 4 }}>{iv.notes}</div>}
+                      </div>
+                      <span className={`pill ${st.c}`} style={{ flexShrink: 0 }}>{st.t}</span>
+                    </div>
+                    {canEdit && iv.status === "SCHEDULED" && (
+                      <div className="flex gap8" style={{ marginTop: 8 }}>
+                        <button className="btn btn-ghost btn-sm" onClick={() => markInterviewDone(iv)}>Прошло</button>
+                        <button className="btn btn-ghost btn-sm" style={{ color: "var(--red)" }} onClick={() => cancelInterview(iv)}>Отменить</button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              {canEdit && !showScheduleForm && (
+                <button className="btn btn-ghost btn-sm" onClick={() => setShowScheduleForm(true)}>
+                  + Запланировать собеседование
+                </button>
+              )}
+
+              {canEdit && showScheduleForm && (
+                <div className="card card-p" style={{ marginTop: 4 }}>
+                  <label className="fld">
+                    <span>Дата и время <em>*</em></span>
+                    <input className="inp" type="datetime-local" value={newWhen} onChange={(e) => setNewWhen(e.target.value)} />
+                  </label>
+                  <label className="fld">
+                    <span>Формат</span>
+                    <select className="inp" value={newFormat} onChange={(e) => setNewFormat(e.target.value)}>
+                      <option value="online">Онлайн</option>
+                      <option value="offline">Очно</option>
+                    </select>
+                  </label>
+                  <label className="fld">
+                    <span>Ссылка на звонок / адрес</span>
+                    <input className="inp" value={newLocation} onChange={(e) => setNewLocation(e.target.value)} placeholder={newFormat === "online" ? "Ссылка на Zoom/Meet" : "Адрес офиса"} />
+                  </label>
+                  <label className="fld">
+                    <span>Заметка</span>
+                    <textarea className="inp" value={newNotes} onChange={(e) => setNewNotes(e.target.value)} style={{ minHeight: 60 }} />
+                  </label>
+                  {interviewError && <div className="mini" style={{ color: "var(--red)", marginBottom: 8 }}>{interviewError}</div>}
+                  <div className="flex gap8">
+                    <button className="btn btn-red btn-sm" disabled={interviewSaving} onClick={scheduleInterview}>
+                      {interviewSaving ? "Сохраняем…" : "Запланировать"}
+                    </button>
+                    <button className="btn btn-ghost btn-sm" onClick={() => setShowScheduleForm(false)}>Отмена</button>
+                  </div>
+                </div>
+              )}
+
+              {!canEdit && interviewError && <div className="mini" style={{ color: "var(--red)" }}>{interviewError}</div>}
+            </div>
           )}
         </div>
       </div>
