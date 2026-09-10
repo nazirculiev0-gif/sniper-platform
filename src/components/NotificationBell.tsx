@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Bell } from "lucide-react";
 
@@ -33,7 +34,12 @@ export default function NotificationBell() {
   const [items, setItems] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
-  const boxRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState({ top: 0, right: 0 });
+  const [mounted, setMounted] = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => setMounted(true), []);
 
   const load = async () => {
     const res = await fetch("/api/notifications");
@@ -51,11 +57,22 @@ export default function NotificationBell() {
 
   useEffect(() => {
     const onClickOutside = (e: MouseEvent) => {
-      if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      if (btnRef.current?.contains(target)) return;
+      if (panelRef.current?.contains(target)) return;
+      setOpen(false);
     };
     document.addEventListener("mousedown", onClickOutside);
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, []);
+
+  const toggleOpen = () => {
+    if (!open && btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      setPos({ top: rect.bottom + 8, right: Math.max(8, window.innerWidth - rect.right) });
+    }
+    setOpen((v) => !v);
+  };
 
   const openItem = async (n: Notification) => {
     if (!n.read) {
@@ -76,9 +93,10 @@ export default function NotificationBell() {
   };
 
   return (
-    <div ref={boxRef} style={{ position: "relative" }}>
+    <div style={{ position: "relative" }}>
       <button
-        onClick={() => setOpen((v) => !v)}
+        ref={btnRef}
+        onClick={toggleOpen}
         aria-label="Уведомления"
         style={{
           position: "relative", background: "none", border: "none", cursor: "pointer",
@@ -100,12 +118,13 @@ export default function NotificationBell() {
         )}
       </button>
 
-      {open && (
+      {mounted && open && createPortal(
         <div
+          ref={panelRef}
           className="card"
           style={{
-            position: "absolute", top: 44, right: 0, width: 340, maxHeight: 420, overflowY: "auto",
-            zIndex: 200, boxShadow: "0 12px 32px rgba(0,0,0,.18)",
+            position: "fixed", top: pos.top, right: pos.right, width: 340, maxWidth: "calc(100vw - 16px)",
+            maxHeight: 420, overflowY: "auto", zIndex: 1000, boxShadow: "0 12px 32px rgba(0,0,0,.22)",
           }}
         >
           <div className="card-h" style={{ padding: "10px 14px" }}>
@@ -138,7 +157,8 @@ export default function NotificationBell() {
               </div>
             </div>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
