@@ -17,6 +17,7 @@ function fmtDate(d?: string | null) {
 export default function RequestSidePanel({
   requestId,
   rewardGross,
+  mode,
   exclusiveDays,
   claimedAt,
   claimDeadline,
@@ -27,6 +28,7 @@ export default function RequestSidePanel({
 }: {
   requestId: string;
   rewardGross: number;
+  mode: string;
   exclusiveDays: number;
   claimedAt: string | null;
   claimDeadline: string | null;
@@ -35,6 +37,7 @@ export default function RequestSidePanel({
   status: string;
   canSimulate: boolean;
 }) {
+  const isExclusive = mode === "EXCLUSIVE";
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
@@ -59,14 +62,14 @@ export default function RequestSidePanel({
     <div style={{ display: "grid", gap: 14 }}>
       <div className="card card-p">
         <div className="mini muted" style={{ marginBottom: 6, textTransform: "uppercase", fontSize: 10.5, letterSpacing: ".04em" }}>Вознаграждение</div>
-        <div className="mini muted">эксклюзив</div>
+        <div className="mini muted">{isExclusive ? "за эксклюзивный подбор" : "за подбор"}</div>
         <b className="sg" style={{ fontSize: 20 }}>{fmtSum(rewardGross)}</b>
       </div>
 
       <div className="card card-p">
         <div className="mini muted" style={{ marginBottom: 10, textTransform: "uppercase", fontSize: 10.5, letterSpacing: ".04em" }}>Сроки</div>
         <div className="flex" style={{ justifyContent: "space-between", marginBottom: 6 }}>
-          <span className="mini muted">Срок эксклюзива</span>
+          <span className="mini muted">{isExclusive ? "Срок эксклюзива" : "Дедлайн активности"}</span>
           <b className="mini">{exclusiveDays} дней</b>
         </div>
         <div className="flex" style={{ justifyContent: "space-between", marginBottom: 6 }}>
@@ -84,6 +87,11 @@ export default function RequestSidePanel({
       {participants.length > 0 && (
         <div className="card card-p">
           <div className="mini muted" style={{ marginBottom: 10, textTransform: "uppercase", fontSize: 10.5, letterSpacing: ".04em" }}>Рекрутеры на заявке</div>
+          {!isExclusive && participants.length > 1 && (
+            <div className="hint" style={{ marginBottom: 10 }}>
+              Несколько рекрутеров работают параллельно. Смотрите на их кандидатов, рейтинг и профиль — найм подтверждается за тем рекрутером, чьего кандидата вы наняли.
+            </div>
+          )}
           {participants.map((p) => (
             <Link key={p.recruiterId} href={`/dashboard/recruiters/${p.recruiterId}`} className="flex gap8" style={{ textDecoration: "none", color: "inherit", marginBottom: 8 }}>
               <span className="av" style={{ width: 26, height: 26, fontSize: 11 }}>
@@ -101,14 +109,14 @@ export default function RequestSidePanel({
       {status === "IN_PROGRESS" && leftDays !== null && (
         <div className="card card-p">
           <div className="mini muted" style={{ marginBottom: 6, textTransform: "uppercase", fontSize: 10.5, letterSpacing: ".04em" }}>
-            Эксклюзив · {exclusiveDays} дн.
+            {isExclusive ? "Эксклюзив" : "Активность"} · {exclusiveDays} дн.
           </div>
           <b className="sg" style={{ fontSize: 15 }}>{leftDays <= 0 ? "Дедлайн сегодня" : `${leftDays} дн. осталось`}</b>
           <div style={{ height: 6, background: "var(--line2)", borderRadius: 99, marginTop: 10, marginBottom: 10, overflow: "hidden" }}>
             <div style={{ height: "100%", width: `${progressPct}%`, background: "var(--warn)" }} />
           </div>
           <div className="mini muted" style={{ marginBottom: 10 }}>
-            Нет активности {exclusiveDays} дней — заявка автоматически вернётся на биржу.
+            Нет активности {exclusiveDays} дней — заявка автоматически вернётся на биржу{!isExclusive ? " (для всех участников)" : ""}.
           </div>
           {canSimulate && (
             <button className="btn btn-ghost btn-sm btn-block" disabled={loading} onClick={simulate}>
