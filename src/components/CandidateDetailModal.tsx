@@ -53,8 +53,42 @@ export default function CandidateDetailModal({
   const [note, setNote] = useState(candidate.note ?? "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [resumeUrl, setResumeUrl] = useState<string | null>(null);
+  const [resumeLoading, setResumeLoading] = useState(false);
+  const [resumeError, setResumeError] = useState("");
 
   const searchStatus = candidate.searchStatus ? SEARCH_STATUS_LABEL[candidate.searchStatus] : null;
+
+  const openResume = async () => {
+    setResumeError("");
+    if (resumeUrl) {
+      window.open(resumeUrl, "_blank");
+      return;
+    }
+    setResumeLoading(true);
+    const res = await fetch(`/api/candidates/${candidate.id}`);
+    setResumeLoading(false);
+    if (!res.ok) {
+      setResumeError("Не удалось загрузить файл");
+      return;
+    }
+    const full = await res.json();
+    if (!full.resumeFileData) {
+      setResumeError("Файл недоступен");
+      return;
+    }
+    try {
+      const byteChars = atob(full.resumeFileData);
+      const byteNumbers = new Array(byteChars.length);
+      for (let i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
+      const blob = new Blob([new Uint8Array(byteNumbers)], { type: full.resumeFileType || "application/octet-stream" });
+      const url = URL.createObjectURL(blob);
+      setResumeUrl(url);
+      window.open(url, "_blank");
+    } catch {
+      setResumeError("Не удалось открыть файл");
+    }
+  };
 
   const saveNote = async () => {
     setSaving(true);
@@ -175,10 +209,23 @@ export default function CandidateDetailModal({
           )}
 
           {tab === "resume" && (
-            <div className="mini muted">
-              {candidate.source === "Резюме (файл)"
-                ? "Кандидат добавлен из загруженного резюме — файл был распознан в демо-режиме. Хранение и просмотр оригинального файла в этой версии платформы не реализовано."
-                : "Кандидат добавлен вручную — резюме не прикреплено."}
+            <div>
+              {candidate.resumeFileName ? (
+                <div>
+                  <div className="flex gap8" style={{ alignItems: "center", marginBottom: 10 }}>
+                    <div>
+                      <b className="mini" style={{ display: "block" }}>{candidate.resumeFileName}</b>
+                      <span className="mini muted">Загружено кандидату в базу рекрутера</span>
+                    </div>
+                    <button className="btn btn-red btn-sm" style={{ marginLeft: "auto" }} disabled={resumeLoading} onClick={openResume}>
+                      {resumeLoading ? "Открываем…" : "Открыть резюме"}
+                    </button>
+                  </div>
+                  {resumeError && <div className="mini" style={{ color: "var(--red)" }}>{resumeError}</div>}
+                </div>
+              ) : (
+                <div className="mini muted">Кандидат добавлен вручную — резюме не прикреплено.</div>
+              )}
             </div>
           )}
 
