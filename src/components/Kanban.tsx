@@ -21,6 +21,7 @@ export default function Kanban({
   canConfirmHire,
   payoutExists,
   addButton,
+  showRecruiter,
 }: {
   requestId: string;
   candidates: any[];
@@ -29,6 +30,7 @@ export default function Kanban({
   canConfirmHire: boolean;
   payoutExists: boolean;
   addButton?: ReactNode;
+  showRecruiter?: boolean;
 }) {
   const router = useRouter();
   // Локальная копия — позволяет карточке визуально "прыгнуть" в новую колонку
@@ -119,6 +121,11 @@ export default function Kanban({
                   >
                     <b className="mini">{c.name}</b>
                     <div className="mini muted">{c.profession || "—"}</div>
+                    {showRecruiter && c.recruiter?.name && (
+                      <div className="mini" style={{ color: "var(--info)", marginTop: 2 }}>
+                        от {c.recruiter.name}
+                      </div>
+                    )}
                     {canEdit && stageIdx < STAGES.length - 1 && s.k !== "REJECTED" && (
                       <div className="flex gap8" style={{ marginTop: 6 }}>
                         <button
