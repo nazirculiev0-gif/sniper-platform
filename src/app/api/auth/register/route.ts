@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { notifyAdmins } from "@/lib/notify";
 
 const schema = z.object({
   email: z.string().email(),
@@ -35,6 +36,15 @@ export async function POST(req: Request) {
         : { recruiterProfile: { create: { name } } }),
     },
   });
+
+  if (role === "RECRUITER") {
+    await notifyAdmins(
+      "RECRUITER_REGISTERED",
+      "Новый рекрутер зарегистрировался",
+      `${name} ожидает верификации`,
+      "/dashboard/admin/recruiters"
+    );
+  }
 
   return NextResponse.json({ id: user.id, email: user.email, role: user.role });
 }
