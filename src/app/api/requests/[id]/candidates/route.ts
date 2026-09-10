@@ -10,6 +10,9 @@ const schema = z.object({
   expSalary: z.number().int().optional(),
   source: z.string().optional(),
   stage: z.enum(["NEW", "SCREENING", "INTERVIEW", "OFFER", "OFFER_ACCEPTED"]).default("NEW"),
+  resumeFileName: z.string().max(200).optional(),
+  resumeFileType: z.string().max(100).optional(),
+  resumeFileData: z.string().max(6_000_000, "Файл слишком большой (максимум ~4 МБ)").optional(),
 });
 
 // POST /api/requests/:id/candidates — рекрутер добавляет кандидата в канбан заявки
