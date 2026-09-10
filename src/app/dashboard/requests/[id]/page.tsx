@@ -10,7 +10,6 @@ import QATab from "@/components/QATab";
 import CloseRequestButton from "@/components/CloseRequestButton";
 import RequestTabs from "@/components/RequestTabs";
 import RequestSidePanel from "@/components/RequestSidePanel";
-import { TARIFFS } from "@/lib/tariffs";
 import { releaseExpiredClaims } from "@/lib/autoRelease";
 
 function fmtSum(n?: number | null) {
@@ -53,7 +52,6 @@ export default async function RequestDetailPage({ params }: { params: { id: stri
     user.role === "RECRUITER" &&
     request.participants.some((p) => p.recruiterId === user.recruiterProfile?.id);
 
-  const tariff = TARIFFS[request.tariffCategory as keyof typeof TARIFFS];
   const st = STATUS_LABEL[request.status];
   const canEditKanban = user.role === "RECRUITER" && isParticipant;
   const showChat = user.role === "EMPLOYER" || isParticipant;
@@ -103,7 +101,7 @@ export default async function RequestDetailPage({ params }: { params: { id: stri
         <div>
           <h1 className="sg" style={{ fontSize: 20, fontWeight: 700 }}>{request.title}</h1>
           <div className="mini muted" style={{ marginTop: 2 }}>
-            {request.company.name} · {tariff?.label} · Ташкент
+            <Link href={`/dashboard/companies/${request.companyId}`} style={{ color: "inherit" }}>{request.company.name}</Link> · Ташкент
           </div>
         </div>
         {user.role === "EMPLOYER" && request.status !== "FILLED" && request.status !== "CLOSED" && (
@@ -113,10 +111,8 @@ export default async function RequestDetailPage({ params }: { params: { id: stri
 
       <div className="flex gap8 wrapf" style={{ margin: "14px 0 24px" }}>
         <span className={`pill ${st.c}`}>{st.t}</span>
-        {request.mode === "EXCLUSIVE" ? (
-          <span className="pill pill-red">Эксклюзив</span>
-        ) : (
-          <span className="pill pill-info">Открытая{request.participants.length > 0 ? ` · ${request.participants.length}` : ""}</span>
+        {request.participants.length > 0 && (
+          <span className="pill pill-info">Рекрутеров: {request.participants.length}</span>
         )}
         {request.depositPaid ? (
           <span className="pill pill-ok">Депозит внесён · без задержек</span>
@@ -150,7 +146,6 @@ export default async function RequestDetailPage({ params }: { params: { id: stri
         <RequestSidePanel
           requestId={request.id}
           rewardGross={request.rewardGross}
-          mode={request.mode}
           exclusiveDays={request.exclusiveDays}
           claimedAt={request.claimedAt?.toISOString() ?? null}
           claimDeadline={request.claimDeadline?.toISOString() ?? null}
