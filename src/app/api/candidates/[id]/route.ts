@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/currentUser";
+import { notifyCompany } from "@/lib/notify";
 
 // GET /api/candidates/:id — полная карточка кандидата, включая файл резюме.
 // Доступно рекрутеру-владельцу или работодателю той заявки, к которой привязан кандидат.
@@ -45,7 +46,10 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const candidate = await prisma.candidate.findUnique({ where: { id: params.id } });
+  const candidate = await prisma.candidate.findUnique({
+    where: { id: params.id },
+    include: { request: { select: { id: true, companyId: true, title: true } } },
+  });
   if (!candidate || candidate.recruiterId !== user.recruiterProfile.id) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
@@ -65,6 +69,16 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       ...(parsed.data.note !== undefined ? { note: parsed.data.note } : {}),
     },
   });
+
+  if (parsed.data.stage === "INTERVIEW" && candidate.stage !== "INTERVIEW" && candidate.request) {
+    await notifyCompany(
+      candidate.request.companyId,
+      "INTERVIEW_SCHEDULED",
+      "Назначено собеседование",
+      `Кандидат ${candidate.name} приглашён на собеседование по «${candidate.request.title}»`,
+      `/dashboard/requests/${candidate.request.id}`
+    );
+  }
 
   return NextResponse.json(updated);
 }
