@@ -3,10 +3,7 @@
 // Депозит (если работодатель его включил) = 50% от указанной суммы.
 // Комиссия платформы = 20% от суммы вознаграждения при подтверждении найма.
 
-export const TARIFFS: Record
-  string,
-  { label: string; hint: string; suggestedRange: [number, number] }
-> = {
+export const TARIFFS: Record<string, { label: string; hint: string; suggestedRange: [number, number] }> = {
   JUNIOR: {
     label: "Junior-специалист",
     hint: "До 1 года опыта",
