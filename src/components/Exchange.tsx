@@ -91,13 +91,17 @@ export default function Exchange({ requests, verified }: { requests: any[]; veri
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <b className="mini" style={{ display: "block" }}>{r.title}</b>
-                  <div className="mini muted">{r.company?.name} · Ташкент</div>
+                  <div className="mini muted">
+                    <Link href={`/dashboard/companies/${r.companyId}`} style={{ color: "inherit" }} onClick={(e) => e.stopPropagation()}>
+                      {r.company?.name}
+                    </Link> · Ташкент
+                  </div>
                 </div>
               </div>
               <div className="flex gap8 wrapf" style={{ marginBottom: 10 }}>
                 <span className="tag">{tariff?.label}</span>
                 {r.company?.industry && <span className="tag">{r.company.industry}</span>}
-                <span className="tag">{r.mode === "EXCLUSIVE" ? "Эксклюзив" : "Открытая"}</span>
+                {r.participants?.length > 0 && <span className="tag">Рекрутеров: {r.participants.length}</span>}
               </div>
               {r.depositPaid && (
                 <div className="mini" style={{ color: "var(--ok)", marginBottom: 8 }}>📄 Депозит внесён · без задержек</div>
@@ -106,7 +110,7 @@ export default function Exchange({ requests, verified }: { requests: any[]; veri
                 {r.description.length > 100 ? r.description.slice(0, 100) + "…" : r.description}
               </p>
               <div className="card-p" style={{ padding: 0, marginBottom: 12 }}>
-                <div className="mini muted">{r.mode === "EXCLUSIVE" ? "Вознаграждение за эксклюзив" : "Вознаграждение за подбор"}</div>
+                <div className="mini muted">Вознаграждение за подбор</div>
                 <b className="sg" style={{ fontSize: 17 }}>{fmtSum(r.rewardGross)}</b>
                 {(r.salaryFrom || r.salaryTo) && (
                   <div className="mini muted" style={{ marginTop: 2 }}>ЗП кандидату: {fmtSum(r.salaryFrom)} – {fmtSum(r.salaryTo)}</div>
