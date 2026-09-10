@@ -61,20 +61,27 @@ export default function CandidateDetailModal({
 
   const openResume = async () => {
     setResumeError("");
+    // Открываем вкладку СРАЗУ, синхронно по клику — иначе браузер блокирует
+    // window.open как всплывающее окно, если он вызван после await.
+    const win = window.open("", "_blank");
+
     if (resumeUrl) {
-      window.open(resumeUrl, "_blank");
+      if (win) win.location.href = resumeUrl;
       return;
     }
+
     setResumeLoading(true);
     const res = await fetch(`/api/candidates/${candidate.id}`);
     setResumeLoading(false);
     if (!res.ok) {
       setResumeError("Не удалось загрузить файл");
+      win?.close();
       return;
     }
     const full = await res.json();
     if (!full.resumeFileData) {
       setResumeError("Файл недоступен");
+      win?.close();
       return;
     }
     try {
@@ -84,9 +91,14 @@ export default function CandidateDetailModal({
       const blob = new Blob([new Uint8Array(byteNumbers)], { type: full.resumeFileType || "application/octet-stream" });
       const url = URL.createObjectURL(blob);
       setResumeUrl(url);
-      window.open(url, "_blank");
+      if (win) {
+        win.location.href = url;
+      } else {
+        setResumeError("Браузер заблокировал открытие вкладки — разрешите всплывающие окна для этого сайта и нажмите ещё раз.");
+      }
     } catch {
       setResumeError("Не удалось открыть файл");
+      win?.close();
     }
   };
 
@@ -222,6 +234,11 @@ export default function CandidateDetailModal({
                     </button>
                   </div>
                   {resumeError && <div className="mini" style={{ color: "var(--red)" }}>{resumeError}</div>}
+                  {resumeUrl && (
+                    <a href={resumeUrl} target="_blank" rel="noreferrer" className="mini" style={{ display: "block", marginTop: 8, color: "var(--info)" }}>
+                      Файл не открылся автоматически? Откройте по этой ссылке
+                    </a>
+                  )}
                 </div>
               ) : (
                 <div className="mini muted">Кандидат добавлен вручную — резюме не прикреплено.</div>
