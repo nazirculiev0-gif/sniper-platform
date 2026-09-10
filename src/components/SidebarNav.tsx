@@ -22,6 +22,7 @@ const NAV: Record<string, { href: string; label: string; icon: LucideIcon }[]> =
     { href: "/dashboard", label: "Обзор", icon: LayoutGrid },
     { href: "/dashboard/requests", label: "Мои заявки", icon: Briefcase },
     { href: "/dashboard/requests/new", label: "Создать заявку", icon: PlusCircle },
+    { href: "/dashboard/profile", label: "Профиль компании", icon: Star },
     { href: "/dashboard/payments", label: "Выплаты", icon: Wallet },
   ],
   RECRUITER: [
