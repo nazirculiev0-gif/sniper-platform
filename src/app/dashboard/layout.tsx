@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/currentUser";
 import SidebarNav from "@/components/SidebarNav";
 import SignOutButton from "@/components/SignOutButton";
 import MobileSidebarWrapper from "@/components/MobileSidebarWrapper";
+import NotificationBell from "@/components/NotificationBell";
 
 const ROLE_LABEL: Record<string, string> = {
   EMPLOYER: "Работодатель",
@@ -28,6 +29,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <div className="t">
             {ROLE_LABEL[user.role]}
             <b>{displayName}</b>
+          </div>
+          <div style={{ marginLeft: "auto", color: "#fff" }}>
+            <NotificationBell />
           </div>
         </div>
         <SidebarNav role={user.role} />
