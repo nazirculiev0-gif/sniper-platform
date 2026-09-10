@@ -47,8 +47,24 @@ model Company {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   requests  VacancyRequest[]
+  availabilitySlots AvailabilitySlot[]
 
   @@map("companies")
+}
+
+// Слоты доступности работодателя для собеседований — повторяются каждую неделю.
+// dayOfWeek: 0 = воскресенье ... 6 = суббота (как в JS Date.getDay()).
+model AvailabilitySlot {
+  id        String   @id @default(cuid())
+  dayOfWeek Int
+  startTime String   // "10:00"
+  endTime   String   // "18:00"
+  createdAt DateTime @default(now())
+
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("availability_slots")
 }
 
 model RecruiterProfile {
