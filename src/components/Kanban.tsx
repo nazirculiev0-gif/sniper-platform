@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import CandidateDetailModal from "@/components/CandidateDetailModal";
 
 const STAGES: { k: string; t: string }[] = [
   { k: "NEW", t: "Новые" },
@@ -18,6 +19,7 @@ export default function Kanban({
   candidates,
   role,
   canEdit,
+  currentRecruiterId,
   canConfirmHire,
   payoutExists,
   addButton,
@@ -27,6 +29,7 @@ export default function Kanban({
   candidates: any[];
   role: string;
   canEdit: boolean;
+  currentRecruiterId?: string | null;
   canConfirmHire: boolean;
   payoutExists: boolean;
   addButton?: ReactNode;
@@ -38,6 +41,7 @@ export default function Kanban({
   const [items, setItems] = useState(candidates);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [overStage, setOverStage] = useState<string | null>(null);
+  const [selected, setSelected] = useState<any | null>(null);
 
   useEffect(() => {
     setItems(candidates);
@@ -75,7 +79,7 @@ export default function Kanban({
     setOverStage(null);
     if (!canEdit || !draggedId) return;
     const dragged = items.find((c) => c.id === draggedId);
-    if (dragged && dragged.stage !== stageKey) {
+    if (dragged && dragged.recruiterId === currentRecruiterId && dragged.stage !== stageKey) {
       moveStage(draggedId, stageKey);
     }
     setDraggedId(null);
@@ -106,16 +110,19 @@ export default function Kanban({
                 <span className="mini muted" style={{ marginLeft: "auto" }}>{inStage.length}</span>
               </div>
               <div style={{ padding: 8, display: "grid", gap: 6, minHeight: 40 }}>
-                {inStage.map((c) => (
+                {inStage.map((c) => {
+                  const canEditThis = canEdit && c.recruiterId === currentRecruiterId;
+                  return (
                   <div
                     key={c.id}
                     className="card card-p"
-                    draggable={canEdit}
+                    draggable={canEditThis}
                     onDragStart={() => setDraggedId(c.id)}
                     onDragEnd={() => { setDraggedId(null); setOverStage(null); }}
+                    onClick={() => setSelected(c)}
                     style={{
                       padding: 10,
-                      cursor: canEdit ? "grab" : "default",
+                      cursor: canEditThis ? "grab" : "pointer",
                       opacity: draggedId === c.id ? 0.4 : 1,
                     }}
                   >
@@ -126,19 +133,19 @@ export default function Kanban({
                         от {c.recruiter.name}
                       </div>
                     )}
-                    {canEdit && stageIdx < STAGES.length - 1 && s.k !== "REJECTED" && (
+                    {canEditThis && stageIdx < STAGES.length - 1 && s.k !== "REJECTED" && (
                       <div className="flex gap8" style={{ marginTop: 6 }}>
                         <button
                           className="btn btn-ghost btn-sm"
                           style={{ padding: "3px 8px" }}
-                          onClick={() => moveStage(c.id, STAGES[stageIdx + 1].k)}
+                          onClick={(e) => { e.stopPropagation(); moveStage(c.id, STAGES[stageIdx + 1].k); }}
                         >
                           Дальше →
                         </button>
                         <button
                           className="btn btn-ghost btn-sm"
                           style={{ padding: "3px 8px", color: "var(--red)" }}
-                          onClick={() => moveStage(c.id, "REJECTED")}
+                          onClick={(e) => { e.stopPropagation(); moveStage(c.id, "REJECTED"); }}
                         >
                           Отказ
                         </button>
@@ -148,18 +155,31 @@ export default function Kanban({
                       <button
                         className="btn btn-ok btn-sm btn-block"
                         style={{ marginTop: 6 }}
-                        onClick={() => confirmHire(c.id)}
+                        onClick={(e) => { e.stopPropagation(); confirmHire(c.id); }}
                       >
                         Подтвердить найм
                       </button>
                     )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           );
         })}
       </div>
+
+      {selected && (
+        <CandidateDetailModal
+          candidate={selected}
+          canEdit={canEdit && selected.recruiterId === currentRecruiterId}
+          onClose={() => setSelected(null)}
+          onUpdated={(updated) => {
+            setItems((prev) => prev.map((c) => (c.id === updated.id ? { ...c, ...updated } : c)));
+            setSelected((prev: any) => (prev ? { ...prev, ...updated } : prev));
+          }}
+        />
+      )}
     </div>
   );
 }
