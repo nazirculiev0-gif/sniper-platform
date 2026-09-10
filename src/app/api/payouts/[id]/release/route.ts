@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/currentUser";
+import { notifyRecruiter } from "@/lib/notify";
 
 const schema = z.object({ half: z.enum(["first", "second"]) });
 
@@ -18,7 +19,10 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const payout = await prisma.payout.findUnique({ where: { id: params.id } });
+  const payout = await prisma.payout.findUnique({
+    where: { id: params.id },
+    include: { request: { select: { title: true } } },
+  });
   if (!payout) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (payout.status !== "IN_ESCROW") {
     return NextResponse.json({ error: "Платёж не в статусе эскроу" }, { status: 400 });
@@ -46,6 +50,14 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       data: { balance: { increment: half } },
     }),
   ]);
+
+  await notifyRecruiter(
+    payout.recruiterId,
+    "PAYOUT_RELEASED",
+    parsed.data.half === "first" ? "Первая половина выплаты переведена" : "Вторая половина выплаты переведена",
+    `${half.toLocaleString("ru-RU")} сум по «${payout.request?.title ?? ""}» зачислены на ваш баланс`,
+    "/dashboard/payments"
+  );
 
   return NextResponse.json(updatedPayout);
 }
