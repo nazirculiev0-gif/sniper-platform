@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 const STAGE_LABEL: Record<string, string> = {
@@ -26,6 +26,16 @@ const TABS = [
   { key: "chat", label: "Переписка" },
   { key: "interviews", label: "Собеседования" },
 ];
+
+const MAX_FILE_BYTES = 4 * 1024 * 1024; // 4 МБ
+
+type CandidateFile = {
+  id: string;
+  fileName: string;
+  fileType: string | null;
+  category: "RESUME" | "OTHER";
+  createdAt: string;
+};
 
 function fmtSum(n?: number | null) {
   if (!n) return "—";
@@ -53,11 +63,28 @@ export default function CandidateDetailModal({
   const [note, setNote] = useState(candidate.note ?? "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+
   const [resumeUrl, setResumeUrl] = useState<string | null>(null);
   const [resumeLoading, setResumeLoading] = useState(false);
   const [resumeError, setResumeError] = useState("");
 
+  const [files, setFiles] = useState<CandidateFile[]>([]);
+  const [filesLoading, setFilesLoading] = useState(true);
+  const [openingId, setOpeningId] = useState<string | null>(null);
+  const [openUrls, setOpenUrls] = useState<Record<string, string>>({});
+  const [fileError, setFileError] = useState("");
+  const [uploading, setUploading] = useState<"RESUME" | "OTHER" | null>(null);
+  const resumeInput = useRef<HTMLInputElement>(null);
+  const otherInput = useRef<HTMLInputElement>(null);
+
   const searchStatus = candidate.searchStatus ? SEARCH_STATUS_LABEL[candidate.searchStatus] : null;
+
+  useEffect(() => {
+    fetch(`/api/candidates/${candidate.id}/files`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data) => setFiles(data))
+      .finally(() => setFilesLoading(false));
+  }, [candidate.id]);
 
   const openResume = async () => {
     setResumeError("");
@@ -85,21 +112,86 @@ export default function CandidateDetailModal({
       return;
     }
     try {
-      const byteChars = atob(full.resumeFileData);
-      const byteNumbers = new Array(byteChars.length);
-      for (let i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
-      const blob = new Blob([new Uint8Array(byteNumbers)], { type: full.resumeFileType || "application/octet-stream" });
-      const url = URL.createObjectURL(blob);
+      const url = base64ToBlobUrl(full.resumeFileData, full.resumeFileType);
       setResumeUrl(url);
-      if (win) {
-        win.location.href = url;
-      } else {
-        setResumeError("Браузер заблокировал открытие вкладки — разрешите всплывающие окна для этого сайта и нажмите ещё раз.");
-      }
+      if (win) win.location.href = url;
+      else setResumeError("Браузер заблокировал открытие вкладки — разрешите всплывающие окна для этого сайта и нажмите ещё раз.");
     } catch {
       setResumeError("Не удалось открыть файл");
       win?.close();
     }
+  };
+
+  const openFile = async (file: CandidateFile) => {
+    setFileError("");
+    const win = window.open("", "_blank"); // синхронно, до await — иначе блокируется браузером
+
+    if (openUrls[file.id]) {
+      if (win) win.location.href = openUrls[file.id];
+      return;
+    }
+
+    setOpeningId(file.id);
+    const res = await fetch(`/api/candidates/${candidate.id}/files/${file.id}`);
+    setOpeningId(null);
+    if (!res.ok) {
+      setFileError("Не удалось загрузить файл");
+      win?.close();
+      return;
+    }
+    const full = await res.json();
+    try {
+      const url = base64ToBlobUrl(full.fileData, full.fileType);
+      setOpenUrls((prev) => ({ ...prev, [file.id]: url }));
+      if (win) win.location.href = url;
+      else setFileError("Браузер заблокировал открытие вкладки — разрешите всплывающие окна и нажмите ещё раз.");
+    } catch {
+      setFileError("Не удалось открыть файл");
+      win?.close();
+    }
+  };
+
+  const deleteFile = async (file: CandidateFile) => {
+    if (!confirm(`Удалить файл «${file.fileName}»?`)) return;
+    const res = await fetch(`/api/candidates/${candidate.id}/files/${file.id}`, { method: "DELETE" });
+    if (res.ok) {
+      setFiles((prev) => prev.filter((f) => f.id !== file.id));
+    } else {
+      setFileError("Не удалось удалить файл");
+    }
+  };
+
+  const uploadFile = (file: File | undefined, category: "RESUME" | "OTHER") => {
+    if (!file) return;
+    setFileError("");
+    if (file.size > MAX_FILE_BYTES) {
+      setFileError("Файл слишком большой — максимум 4 МБ");
+      return;
+    }
+    setUploading(category);
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const result = reader.result as string;
+      const base64 = result.split(",")[1] ?? "";
+      const res = await fetch(`/api/candidates/${candidate.id}/files`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fileName: file.name, fileType: file.type, fileData: base64, category }),
+      });
+      setUploading(null);
+      if (res.ok) {
+        const created = await res.json();
+        setFiles((prev) => [created, ...prev]);
+        router.refresh();
+      } else {
+        setFileError("Не удалось загрузить файл");
+      }
+    };
+    reader.onerror = () => {
+      setUploading(null);
+      setFileError("Не удалось прочитать файл");
+    };
+    reader.readAsDataURL(file);
   };
 
   const saveNote = async () => {
@@ -118,6 +210,9 @@ export default function CandidateDetailModal({
       router.refresh();
     }
   };
+
+  const resumeFiles = files.filter((f) => f.category === "RESUME");
+  const otherFiles = files.filter((f) => f.category === "OTHER");
 
   return (
     <div
@@ -222,32 +317,91 @@ export default function CandidateDetailModal({
 
           {tab === "resume" && (
             <div>
-              {candidate.resumeFileName ? (
-                <div>
-                  <div className="flex gap8" style={{ alignItems: "center", marginBottom: 10 }}>
+              {candidate.resumeFileName && (
+                <div className="card card-p" style={{ marginBottom: 10 }}>
+                  <div className="flex gap8" style={{ alignItems: "center" }}>
                     <div>
                       <b className="mini" style={{ display: "block" }}>{candidate.resumeFileName}</b>
-                      <span className="mini muted">Загружено кандидату в базу рекрутера</span>
+                      <span className="mini muted">Загружено при создании карточки</span>
                     </div>
                     <button className="btn btn-red btn-sm" style={{ marginLeft: "auto" }} disabled={resumeLoading} onClick={openResume}>
-                      {resumeLoading ? "Открываем…" : "Открыть резюме"}
+                      {resumeLoading ? "Открываем…" : "Открыть"}
                     </button>
                   </div>
-                  {resumeError && <div className="mini" style={{ color: "var(--red)" }}>{resumeError}</div>}
+                  {resumeError && <div className="mini" style={{ color: "var(--red)", marginTop: 6 }}>{resumeError}</div>}
                   {resumeUrl && (
-                    <a href={resumeUrl} target="_blank" rel="noreferrer" className="mini" style={{ display: "block", marginTop: 8, color: "var(--info)" }}>
+                    <a href={resumeUrl} target="_blank" rel="noreferrer" className="mini" style={{ display: "block", marginTop: 6, color: "var(--info)" }}>
                       Файл не открылся автоматически? Откройте по этой ссылке
                     </a>
                   )}
                 </div>
-              ) : (
-                <div className="mini muted">Кандидат добавлен вручную — резюме не прикреплено.</div>
               )}
+
+              {filesLoading && <div className="mini muted">Загрузка…</div>}
+              {!filesLoading && resumeFiles.map((f) => (
+                <FileRow
+                  key={f.id}
+                  file={f}
+                  canEdit={canEdit}
+                  opening={openingId === f.id}
+                  onOpen={() => openFile(f)}
+                  onDelete={() => deleteFile(f)}
+                />
+              ))}
+
+              {!filesLoading && !candidate.resumeFileName && resumeFiles.length === 0 && (
+                <div className="mini muted" style={{ marginBottom: 10 }}>Резюме ещё не прикреплено.</div>
+              )}
+
+              {canEdit && (
+                <>
+                  <input
+                    ref={resumeInput}
+                    type="file"
+                    accept=".pdf,.doc,.docx,.txt"
+                    style={{ display: "none" }}
+                    onChange={(e) => { uploadFile(e.target.files?.[0], "RESUME"); e.target.value = ""; }}
+                  />
+                  <button className="btn btn-ghost btn-sm" disabled={uploading === "RESUME"} onClick={() => resumeInput.current?.click()}>
+                    {uploading === "RESUME" ? "Загружаем…" : "+ Загрузить резюме"}
+                  </button>
+                </>
+              )}
+              {fileError && <div className="mini" style={{ color: "var(--red)", marginTop: 8 }}>{fileError}</div>}
             </div>
           )}
 
           {tab === "files" && (
-            <div className="mini muted">Загрузка файлов по кандидату пока не реализована.</div>
+            <div>
+              {filesLoading && <div className="mini muted">Загрузка…</div>}
+              {!filesLoading && otherFiles.length === 0 && (
+                <div className="mini muted" style={{ marginBottom: 10 }}>Файлов пока нет.</div>
+              )}
+              {!filesLoading && otherFiles.map((f) => (
+                <FileRow
+                  key={f.id}
+                  file={f}
+                  canEdit={canEdit}
+                  opening={openingId === f.id}
+                  onOpen={() => openFile(f)}
+                  onDelete={() => deleteFile(f)}
+                />
+              ))}
+              {canEdit && (
+                <>
+                  <input
+                    ref={otherInput}
+                    type="file"
+                    style={{ display: "none" }}
+                    onChange={(e) => { uploadFile(e.target.files?.[0], "OTHER"); e.target.value = ""; }}
+                  />
+                  <button className="btn btn-ghost btn-sm" disabled={uploading === "OTHER"} onClick={() => otherInput.current?.click()}>
+                    {uploading === "OTHER" ? "Загружаем…" : "+ Загрузить файл"}
+                  </button>
+                </>
+              )}
+              {fileError && <div className="mini" style={{ color: "var(--red)", marginTop: 8 }}>{fileError}</div>}
+            </div>
           )}
 
           {tab === "chat" && (
@@ -259,6 +413,45 @@ export default function CandidateDetailModal({
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function base64ToBlobUrl(base64: string, mimeType?: string | null) {
+  const byteChars = atob(base64);
+  const byteNumbers = new Array(byteChars.length);
+  for (let i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
+  const blob = new Blob([new Uint8Array(byteNumbers)], { type: mimeType || "application/octet-stream" });
+  return URL.createObjectURL(blob);
+}
+
+function FileRow({
+  file,
+  canEdit,
+  opening,
+  onOpen,
+  onDelete,
+}: {
+  file: CandidateFile;
+  canEdit: boolean;
+  opening: boolean;
+  onOpen: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <div className="card card-p flex gap8" style={{ alignItems: "center", marginBottom: 8 }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <b className="mini" style={{ display: "block" }}>{file.fileName}</b>
+        <span className="mini muted">{new Date(file.createdAt).toLocaleDateString("ru-RU")}</span>
+      </div>
+      <button className="btn btn-ghost btn-sm" disabled={opening} onClick={onOpen}>
+        {opening ? "…" : "Открыть"}
+      </button>
+      {canEdit && (
+        <button className="btn btn-ghost btn-sm" style={{ color: "var(--red)" }} onClick={onDelete}>
+          Удалить
+        </button>
+      )}
     </div>
   );
 }
