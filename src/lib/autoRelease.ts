@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { notifyRecruiter } from "@/lib/notify";
 
 // Возвращает на биржу заявки, у которых истёк 14-дневный дедлайн закрепления
 // и при этом рекрутер не добавил ни одного кандидата.
@@ -31,6 +32,16 @@ export async function releaseExpiredClaims() {
         },
       }),
     ]);
+
+    for (const p of r.participants) {
+      await notifyRecruiter(
+        p.recruiterId,
+        "REQUEST_AUTO_RELEASED",
+        "Заявка вернулась на биржу",
+        `Нет активности по «${r.title}» — вы откреплены, заявка снова открыта для отклика`,
+        "/dashboard"
+      );
+    }
   }
 
   return expired.length;
