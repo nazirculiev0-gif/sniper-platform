@@ -227,6 +227,9 @@ model Candidate {
   source        String?
   stage         KanbanStage  @default(NEW)
   note          String?
+  resumeFileName String?
+  resumeFileType String?
+  resumeFileData String?     @db.Text // base64, без префикса data:...;base64,
   createdAt     DateTime     @default(now())
 
   recruiterId   String
