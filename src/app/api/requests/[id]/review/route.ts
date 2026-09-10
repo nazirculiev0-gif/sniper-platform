@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/currentUser";
+import { notifyRecruiter } from "@/lib/notify";
 
 const schema = z.object({
   rating: z.number().int().min(1).max(5),
@@ -56,6 +57,14 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     where: { id: request.payout.recruiterId },
     data: { rating: agg._avg.rating ?? 0 },
   });
+
+  await notifyRecruiter(
+    request.payout.recruiterId,
+    "REVIEW_RECEIVED",
+    "Новый отзыв о вас",
+    `${parsed.data.rating}★ по заявке «${request.title}»`,
+    `/dashboard/recruiters/${request.payout.recruiterId}`
+  );
 
   return NextResponse.json(review, { status: 201 });
 }
