@@ -35,8 +35,7 @@ export default function NotificationBell() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const btnRef = useRef<HTMLButtonElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
+  const boxRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => setMounted(true), []);
 
@@ -56,18 +55,11 @@ export default function NotificationBell() {
 
   useEffect(() => {
     const onClickOutside = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (btnRef.current?.contains(target)) return;
-      if (panelRef.current?.contains(target)) return;
-      setOpen(false);
+      if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false);
     };
     document.addEventListener("mousedown", onClickOutside);
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, []);
-
-  const toggleOpen = () => {
-    setOpen((v) => !v);
-  };
 
   const openItem = async (n: Notification) => {
     if (!n.read) {
@@ -87,25 +79,27 @@ export default function NotificationBell() {
     setUnreadCount(0);
   };
 
-  return (
-    <div style={{ position: "relative" }}>
+  if (!mounted) return null;
+
+  return createPortal(
+    <div ref={boxRef} style={{ position: "fixed", top: 16, right: 16, zIndex: 1000 }}>
       <button
-        ref={btnRef}
-        onClick={toggleOpen}
+        onClick={() => setOpen((v) => !v)}
         aria-label="Уведомления"
         style={{
-          position: "relative", background: "none", border: "none", cursor: "pointer",
-          width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center",
-          borderRadius: 8, color: "inherit",
+          position: "relative", background: "#fff", border: "1px solid var(--line)", cursor: "pointer",
+          width: 40, height: 40, display: "flex", alignItems: "center", justifyContent: "center",
+          borderRadius: 10, color: "var(--dark)", boxShadow: "0 2px 8px rgba(0,0,0,.08)",
         }}
       >
         <Bell size={19} />
         {unreadCount > 0 && (
           <span
             style={{
-              position: "absolute", top: 2, right: 2, minWidth: 16, height: 16, padding: "0 3px",
+              position: "absolute", top: -3, right: -3, minWidth: 16, height: 16, padding: "0 3px",
               borderRadius: 99, background: "var(--red)", color: "#fff", fontSize: 10, fontWeight: 700,
               display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1,
+              border: "2px solid #fff",
             }}
           >
             {unreadCount > 9 ? "9+" : unreadCount}
@@ -113,13 +107,12 @@ export default function NotificationBell() {
         )}
       </button>
 
-      {mounted && open && createPortal(
+      {open && (
         <div
-          ref={panelRef}
           className="card"
           style={{
-            position: "fixed", top: 16, right: 16, width: 340, maxWidth: "calc(100vw - 16px)",
-            maxHeight: 420, overflowY: "auto", zIndex: 1000, boxShadow: "0 12px 32px rgba(0,0,0,.22)",
+            position: "absolute", top: 48, right: 0, width: 340, maxWidth: "calc(100vw - 32px)",
+            maxHeight: 420, overflowY: "auto", boxShadow: "0 12px 32px rgba(0,0,0,.22)",
           }}
         >
           <div className="card-h" style={{ padding: "10px 14px" }}>
@@ -152,9 +145,9 @@ export default function NotificationBell() {
               </div>
             </div>
           ))}
-        </div>,
-        document.body
+        </div>
       )}
-    </div>
+    </div>,
+    document.body
   );
 }
