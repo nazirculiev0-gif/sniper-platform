@@ -1,12 +1,8 @@
 import Link from "next/link";
-import { TARIFFS } from "@/lib/tariffs";
-
-function fmtSum(n: number) {
-  return n.toLocaleString("ru-RU") + " сум";
-}
+import { TARIFFS, fmtSuggestedRange } from "@/lib/tariffs";
 
 const EMPLOYER_STEPS = [
-  { t: "Опишите вакансию", d: "Название, требования, зарплатная вилка и тариф закрытия — публикация занимает пару минут." },
+  { t: "Опишите вакансию", d: "Название, требования, зарплатная вилка и сумма вознаграждения рекрутеру — вы указываете её сами, публикация занимает пару минут." },
   { t: "Получайте кандидатов", d: "Рекрутеры откликаются и ведут кандидатов по воронке — вы видите весь процесс в канбане." },
   { t: "Платите только за результат", d: "Оплата — только когда кандидат выходит на работу. Ничего не нашли — деньги вернутся." },
 ];
@@ -20,11 +16,15 @@ const RECRUITER_STEPS = [
 const FAQ = [
   {
     q: "Сколько стоит разместить вакансию?",
-    a: "Публикация вакансии бесплатна. Вы платите только вознаграждение рекрутеру после того, как кандидат выйдет на работу — вознаграждение зависит от выбранного тарифа (грейда позиции).",
+    a: "Публикация вакансии бесплатна. Сумму вознаграждения рекрутеру вы указываете сами при создании заявки — грейд позиции лишь подсказывает ориентировочный рыночный уровень.",
   },
   {
     q: "Что если рекрутер не найдёт подходящего кандидата?",
-    a: "Если за срок эксклюзива никто не откликнулся или рекрутер не показал прогресса, заявка автоматически возвращается на биржу — вы ничего не теряете.",
+    a: "Если за отведённый срок никто не откликнулся или нет активности, заявка автоматически возвращается на биржу — вы ничего не теряете.",
+  },
+  {
+    q: "Можно ли, чтобы вакансию вели сразу несколько рекрутеров?",
+    a: "Да — в открытом режиме на заявку может откликнуться сразу несколько рекрутеров. Вы видите кандидатов от каждого, их рейтинг и профиль, и сами решаете, чьего кандидата нанять. Если нужен только один рекрутер — выберите режим «Эксклюзив».",
   },
   {
     q: "Как проверяются рекрутеры?",
@@ -83,7 +83,7 @@ export default function Landing() {
           </div>
           <div className="kpi">
             <div className="n" style={{ fontSize: 20 }}>14 дней</div>
-            <div className="l">На эксклюзивную работу рекрутера над заявкой</div>
+            <div className="l">Без активности по заявке — автовозврат на биржу</div>
           </div>
           <div className="kpi">
             <div className="n" style={{ fontSize: 20 }}>Верифицированные</div>
@@ -133,16 +133,18 @@ export default function Landing() {
 
       {/* Pricing */}
       <div id="pricing" className="wrap" style={{ padding: "0 26px 56px" }}>
-        <h2 className="sg" style={{ fontSize: 24, marginBottom: 8, textAlign: "center" }}>Тарифы закрытия вакансий</h2>
+        <h2 className="sg" style={{ fontSize: 24, marginBottom: 8, textAlign: "center" }}>Вы сами устанавливаете вознаграждение</h2>
         <p className="mini muted" style={{ textAlign: "center", marginBottom: 28 }}>
-          Фиксированная сумма зависит от грейда позиции. Депозит 15% вносится при публикации, остаток — после подтверждения найма.
+          Сумму за подбор указывает работодатель — грейд ниже лишь ориентир по рынку. Депозит 15% — опционален:
+          с депозитом рекрутеры увереннее берутся за заявку, без депозита оплата происходит только после найма.
         </p>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14 }}>
           {Object.entries(TARIFFS).map(([key, t]) => (
             <div key={key} className="card card-p" style={{ textAlign: "center" }}>
               <div className="mini muted" style={{ marginBottom: 8 }}>{t.hint}</div>
               <b className="sg" style={{ fontSize: 15, display: "block", marginBottom: 10 }}>{t.label}</b>
-              <div className="sg" style={{ fontSize: 20, fontWeight: 700 }}>{fmtSum(t.amount)}</div>
+              <div className="sg" style={{ fontSize: 18, fontWeight: 700 }}>{fmtSuggestedRange(t.suggestedRange)}</div>
+              <div className="mini muted" style={{ marginTop: 4 }}>ориентировочно</div>
             </div>
           ))}
         </div>
