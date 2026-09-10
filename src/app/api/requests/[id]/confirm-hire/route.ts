@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/currentUser";
 import { commissionFor } from "@/lib/tariffs";
+import { notifyRecruiter } from "@/lib/notify";
 
 const schema = z.object({ candidateId: z.string() });
 
@@ -63,6 +64,14 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       data: { status: "FILLED", hiredCandidateId: candidate.id },
     }),
   ]);
+
+  await notifyRecruiter(
+    candidate.recruiterId,
+    "HIRE_CONFIRMED",
+    "Наём подтверждён",
+    `Работодатель подтвердил найм кандидата ${candidate.name} по «${request.title}» — вознаграждение ${request.rewardGross.toLocaleString("ru-RU")} сум`,
+    `/dashboard/requests/${request.id}`
+  );
 
   return NextResponse.json(payout, { status: 201 });
 }
