@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/currentUser";
-import { TARIFFS, depositFor, EXCLUSIVE_DAYS, GUARANTEE_DAYS } from "@/lib/tariffs";
+import { depositFor, EXCLUSIVE_DAYS, GUARANTEE_DAYS } from "@/lib/tariffs";
 import { releaseExpiredClaims } from "@/lib/autoRelease";
 
 // GET /api/requests
@@ -49,13 +49,16 @@ const createSchema = z.object({
   salaryTo: z.number().int().optional(),
   mode: z.enum(["EXCLUSIVE", "OPEN"]).default("OPEN"),
   tariffCategory: z.enum(["JUNIOR", "MIDDLE", "SENIOR", "LEAD", "TOP_MANAGEMENT"]),
+  rewardGross: z.number().int().min(100_000, "Минимальное вознаграждение — 100 000 сум"),
+  depositEnabled: z.boolean().default(true),
   guaranteeDays: z.number().int().default(GUARANTEE_DAYS),
 });
 
 // POST /api/requests — только работодатель.
-// Тариф берётся из фиксированной сетки по категории, депозит = 15% и считается
-// внесённым сразу (эмуляция оплаты — в реальной системе здесь вызов Payme/Click).
-// После оплаты депозита заявка уходит на модерацию.
+// Сумму вознаграждения работодатель указывает сам (rewardGross), грейд — только
+// фильтр для биржи. Депозит опционален (depositEnabled): если включён — 15% от
+// суммы считается внесённым сразу (эмуляция оплаты — в реальной системе здесь
+// вызов Payme/Click). Заявка в любом случае уходит на модерацию.
 export async function POST(req: Request) {
   const user = await getCurrentUser();
   if (!user || user.role !== "EMPLOYER") {
@@ -67,8 +70,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const tariff = TARIFFS[parsed.data.tariffCategory];
-  const deposit = depositFor(tariff.amount);
+  const { rewardGross, depositEnabled } = parsed.data;
+  const deposit = depositEnabled ? depositFor(rewardGross) : 0;
 
   const request = await prisma.vacancyRequest.create({
     data: {
@@ -79,9 +82,9 @@ export async function POST(req: Request) {
       salaryTo: parsed.data.salaryTo,
       mode: parsed.data.mode,
       tariffCategory: parsed.data.tariffCategory,
-      rewardGross: tariff.amount,
+      rewardGross,
       depositAmount: deposit,
-      depositPaid: true, // симуляция мгновенной оплаты депозита
+      depositPaid: depositEnabled, // симуляция мгновенной оплаты депозита, если он включён
       exclusiveDays: EXCLUSIVE_DAYS,
       guaranteeDays: parsed.data.guaranteeDays,
       companyId: user.company!.id,
