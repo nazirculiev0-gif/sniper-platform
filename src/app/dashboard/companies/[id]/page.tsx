@@ -28,9 +28,12 @@ export default async function CompanyPublicProfile({ params }: { params: { id: s
         include: { payout: true, _count: { select: { candidates: true } } },
         orderBy: { createdAt: "desc" },
       },
+      availabilitySlots: { orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }] },
     },
   });
   if (!company) notFound();
+
+  const DAY_LABELS = ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
 
   const totalRequests = company.requests.length;
   const filledRequests = company.requests.filter((r) => r.status === "FILLED").length;
@@ -76,6 +79,19 @@ export default async function CompanyPublicProfile({ params }: { params: { id: s
           <div className="l">Выплачено рекрутерам</div>
         </div>
       </div>
+
+      {company.availabilitySlots.length > 0 && (
+        <div className="card card-p" style={{ marginBottom: 18 }}>
+          <div className="mini muted" style={{ marginBottom: 8, textTransform: "uppercase", fontSize: 10.5, letterSpacing: ".04em" }}>
+            Доступность для собеседований
+          </div>
+          <div className="flex gap8 wrapf">
+            {company.availabilitySlots.map((s) => (
+              <span key={s.id} className="tag">{DAY_LABELS[s.dayOfWeek]} {s.startTime}–{s.endTime}</span>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="sectit" style={{ fontSize: 15, marginBottom: 10 }}>
         Вакансии {openRequests > 0 ? `· ${openRequests} сейчас открыто` : ""}
