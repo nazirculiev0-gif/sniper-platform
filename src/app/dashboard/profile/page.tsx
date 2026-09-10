@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/currentUser";
 import ProfileEditForm from "@/components/ProfileEditForm";
 import CompanyProfileEditForm from "@/components/CompanyProfileEditForm";
+import AvailabilityEditor from "@/components/AvailabilityEditor";
 
 export default async function ProfileSettingsPage() {
   const user = await getCurrentUser();
@@ -31,6 +32,7 @@ export default async function ProfileSettingsPage() {
         <CompanyProfileEditForm
           company={JSON.parse(JSON.stringify(user.company))}
         />
+        <AvailabilityEditor />
       </div>
     );
   }
