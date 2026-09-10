@@ -135,4 +135,130 @@ export default function AddCandidateModal({ requestId, onClose }: { requestId: s
       <div className="card" style={{ width: "min(640px, 100%)", maxHeight: "85vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
         <div className="card-h">
           <h3 style={{ fontSize: 15 }}>Добавить кандидата в заявку</h3>
-          <button className="btn btn-ghost btn-sm" style={{ marginLeft:
+          <button className="btn btn-ghost btn-sm" style={{ marginLeft: "auto" }} onClick={onClose}>×</button>
+        </div>
+
+        <div className="flex gap8" style={{ padding: "12px 18px 0", borderBottom: "1px solid var(--line)" }}>
+          <button
+            onClick={() => setTab("base")}
+            style={{ background: "none", border: "none", borderBottom: tab === "base" ? "2px solid var(--red)" : "2px solid transparent", color: tab === "base" ? "var(--red)" : "var(--mid)", fontWeight: 600, fontSize: 13, padding: "8px 4px", marginRight: 16, cursor: "pointer" }}
+          >
+            Из моей базы
+          </button>
+          <button
+            onClick={() => setTab("new")}
+            style={{ background: "none", border: "none", borderBottom: tab === "new" ? "2px solid var(--red)" : "2px solid transparent", color: tab === "new" ? "var(--red)" : "var(--mid)", fontWeight: 600, fontSize: 13, padding: "8px 4px", marginRight: 16, cursor: "pointer" }}
+          >
+            + Новый кандидат
+          </button>
+        </div>
+
+        <div style={{ padding: 18 }}>
+          {tab === "base" && (
+            <div>
+              {loadingBase && <div className="mini muted">Загрузка…</div>}
+              {!loadingBase && base.length === 0 && (
+                <div className="mini muted">В базе нет свободных кандидатов — все уже привязаны к заявкам, либо база пуста.</div>
+              )}
+              <div style={{ display: "grid", gap: 8 }}>
+                {base.map((c) => (
+                  <div key={c.id} className="card card-p flex gap8" style={{ alignItems: "center" }}>
+                    <div className="av" style={{ width: 32, height: 32, fontSize: 12 }}>
+                      {c.name.split(" ").map((w: string) => w[0]).slice(0, 2).join("")}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <b className="mini" style={{ display: "block" }}>{c.name}</b>
+                      <span className="mini muted">{c.profession || "—"} {c.expSalary ? `· ${fmtSum(c.expSalary)}` : ""}</span>
+                    </div>
+                    <button className="btn btn-red btn-sm" disabled={loading} onClick={() => addFromBase(c.id)}>+ Добавить</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {tab === "new" && (
+            <div>
+              <input
+                ref={fileInput}
+                type="file"
+                accept=".pdf,.doc,.docx,.txt"
+                style={{ display: "none" }}
+                onChange={(e) => handleFile(e.target.files?.[0])}
+              />
+              <div
+                onClick={() => fileInput.current?.click()}
+                style={{
+                  border: "1.5px dashed var(--line)", borderRadius: "var(--rs)", padding: 16, textAlign: "center",
+                  cursor: "pointer", marginBottom: 14, background: cvStatus === "done" ? "var(--okbg)" : "var(--warm)",
+                }}
+              >
+                {cvStatus === "idle" && (
+                  <>
+                    <b className="mini">Загрузить резюме</b>
+                    <div className="mini muted">PDF · Word · Excel — перетащите или нажмите. Поля заполнятся автоматически.</div>
+                  </>
+                )}
+                {cvStatus === "parsing" && (
+                  <>
+                    <b className="mini">Анализируем резюме…</b>
+                    <div className="mini muted">{fileName}</div>
+                  </>
+                )}
+                {cvStatus === "done" && (
+                  <>
+                    <b className="mini" style={{ color: "var(--ok)" }}>Распознано ✓ поля заполнены, файл сохранён</b>
+                    <div className="mini muted">{fileName} · распознавание полей — демо, файл настоящий</div>
+                  </>
+                )}
+                {cvStatus === "error" && (
+                  <>
+                    <b className="mini" style={{ color: "var(--red)" }}>Не удалось загрузить файл</b>
+                    <div className="mini muted">{fileError}</div>
+                  </>
+                )}
+              </div>
+
+              <div className="flex gap8" style={{ marginBottom: 10 }}>
+                <label className="fld" style={{ marginBottom: 0, flex: 1 }}>
+                  <span>ФИО <em>*</em></span>
+                  <input className="inp" value={name} onChange={(e) => setName(e.target.value)} />
+                </label>
+                <label className="fld" style={{ marginBottom: 0, flex: 1 }}>
+                  <span>Профессия</span>
+                  <input className="inp" value={profession} onChange={(e) => setProfession(e.target.value)} />
+                </label>
+              </div>
+              <div className="flex gap8" style={{ marginBottom: 10 }}>
+                <label className="fld" style={{ marginBottom: 0, flex: 1 }}>
+                  <span>Ожидания, сум</span>
+                  <input className="inp" value={expSalary} onChange={(e) => setExpSalary(e.target.value)} />
+                </label>
+                <label className="fld" style={{ marginBottom: 0, flex: 1 }}>
+                  <span>Этап</span>
+                  <select className="inp" value={stage} onChange={(e) => setStage(e.target.value)}>
+                    <option value="NEW">Поиск</option>
+                    <option value="SCREENING">Скрининг</option>
+                    <option value="INTERVIEW">Интервью</option>
+                  </select>
+                </label>
+              </div>
+              <label className="fld">
+                <span>Навыки (через запятую)</span>
+                <input
+                  className="inp"
+                  value={skills.join(", ")}
+                  onChange={(e) => setSkills(e.target.value.split(",").map((s: string) => s.trim()).filter(Boolean))}
+                />
+              </label>
+              <div className="hint" style={{ marginBottom: 14 }}>Кандидат сохранится в вашу базу и добавится в канбан заявки.</div>
+              <button className="btn btn-red btn-block" disabled={loading || !name.trim()} onClick={createAndAdd}>
+                {loading ? "Добавляем…" : "Создать и добавить"}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
