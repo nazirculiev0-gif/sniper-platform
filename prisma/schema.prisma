@@ -223,6 +223,12 @@ enum CandidateFileCategory {
   OTHER
 }
 
+enum InterviewStatus {
+  SCHEDULED
+  DONE
+  CANCELLED
+}
+
 model Candidate {
   id            String       @id @default(cuid())
   name          String
@@ -245,8 +251,25 @@ model Candidate {
   request       VacancyRequest?  @relation(fields: [requestId], references: [id], onDelete: SetNull)
 
   files         CandidateFile[]
+  interviews    Interview[]
 
   @@map("candidates")
+}
+
+// Планирование собеседования: дата/время, формат, место/ссылка, статус.
+model Interview {
+  id          String          @id @default(cuid())
+  scheduledAt DateTime
+  format      String?         // "online" | "offline" | свободный текст
+  location    String?         // ссылка на звонок или адрес
+  notes       String?
+  status      InterviewStatus @default(SCHEDULED)
+  createdAt   DateTime        @default(now())
+
+  candidateId String
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@map("interviews")
 }
 
 // Файлы кандидата, дозагруженные уже после создания карточки (резюме и прочее).
@@ -331,6 +354,7 @@ enum NotificationType {
   REQUEST_AUTO_RELEASED
   NEW_REQUEST_PENDING
   RECRUITER_REGISTERED
+  INTERVIEW_CANCELLED
 }
 
 model Notification {
