@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/currentUser";
+import { notifyCompany } from "@/lib/notify";
 
 const schema = z.object({ candidateId: z.string() });
 
@@ -34,6 +35,20 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     where: { id: candidate.id },
     data: { requestId: params.id, stage: "NEW" },
   });
+
+  const request = await prisma.vacancyRequest.findUnique({
+    where: { id: params.id },
+    select: { companyId: true, title: true },
+  });
+  if (request) {
+    await notifyCompany(
+      request.companyId,
+      "CANDIDATE_ADDED",
+      "Новый кандидат по заявке",
+      `${user.recruiterProfile.name} добавил кандидата ${updated.name} на «${request.title}»`,
+      `/dashboard/requests/${params.id}`
+    );
+  }
 
   return NextResponse.json(updated, { status: 201 });
 }
