@@ -33,10 +33,15 @@ export default function AddCandidateModal({ requestId, onClose }: { requestId: s
   const [expSalary, setExpSalary] = useState("");
   const [skills, setSkills] = useState<string[]>([]);
   const [stage, setStage] = useState("NEW");
-  const [cvStatus, setCvStatus] = useState<"idle" | "parsing" | "done">("idle");
+  const [cvStatus, setCvStatus] = useState<"idle" | "parsing" | "done" | "error">("idle");
   const [fileName, setFileName] = useState("");
+  const [fileType, setFileType] = useState("");
+  const [fileData, setFileData] = useState("");
+  const [fileError, setFileError] = useState("");
   const [loading, setLoading] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
+
+  const MAX_FILE_BYTES = 4 * 1024 * 1024; // 4 МБ
 
   useEffect(() => {
     fetch("/api/candidates/base")
@@ -63,15 +68,35 @@ export default function AddCandidateModal({ requestId, onClose }: { requestId: s
 
   const handleFile = (file?: File) => {
     if (!file) return;
+    setFileError("");
+    if (file.size > MAX_FILE_BYTES) {
+      setFileError("Файл слишком большой — максимум 4 МБ");
+      setCvStatus("error");
+      return;
+    }
     setFileName(file.name);
+    setFileType(file.type);
     setCvStatus("parsing");
-    setTimeout(() => {
-      const parsed = simulateParse(file.name);
-      setName(parsed.name);
-      setProfession(parsed.profession);
-      setSkills(parsed.skills);
-      setCvStatus("done");
-    }, 1200);
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      const base64 = result.split(",")[1] ?? "";
+      // "Распознавание" полей — демо-симуляция; сам файл при этом сохраняется по-настоящему.
+      setTimeout(() => {
+        const parsed = simulateParse(file.name);
+        setName(parsed.name);
+        setProfession(parsed.profession);
+        setSkills(parsed.skills);
+        setFileData(base64);
+        setCvStatus("done");
+      }, 1200);
+    };
+    reader.onerror = () => {
+      setFileError("Не удалось прочитать файл");
+      setCvStatus("error");
+    };
+    reader.readAsDataURL(file);
   };
 
   const createAndAdd = async () => {
@@ -87,6 +112,9 @@ export default function AddCandidateModal({ requestId, onClose }: { requestId: s
         expSalary: expSalary ? Number(expSalary.replace(/\D/g, "")) : undefined,
         source: fileName ? "Резюме (файл)" : "Вручную",
         stage,
+        resumeFileName: fileName || undefined,
+        resumeFileType: fileType || undefined,
+        resumeFileData: fileData || undefined,
       }),
     });
     setLoading(false);
@@ -179,8 +207,14 @@ export default function AddCandidateModal({ requestId, onClose }: { requestId: s
                 )}
                 {cvStatus === "done" && (
                   <>
-                    <b className="mini" style={{ color: "var(--ok)" }}>Распознано ✓ поля заполнены</b>
-                    <div className="mini muted">{fileName} · распознавание — демо</div>
+                    <b className="mini" style={{ color: "var(--ok)" }}>Распознано ✓ поля заполнены, файл сохранён</b>
+                    <div className="mini muted">{fileName} · распознавание полей — демо, файл настоящий</div>
+                  </>
+                )}
+                {cvStatus === "error" && (
+                  <>
+                    <b className="mini" style={{ color: "var(--red)" }}>Не удалось загрузить файл</b>
+                    <div className="mini muted">{fileError}</div>
                   </>
                 )}
               </div>
@@ -218,8 +252,12 @@ export default function AddCandidateModal({ requestId, onClose }: { requestId: s
                 />
               </label>
               <div className="hint" style={{ marginBottom: 14 }}>Кандидат сохранится в вашу базу и добавится в канбан заявки.</div>
-              <button className="btn btn-red btn-block" disabled={loading || !name.trim()} onClick={createAndAdd}>
-                {loading ? "Добавляем…" : "Создать и добавить"}
+              <button
+                className="btn btn-red btn-block"
+                disabled={loading || !name.trim() || cvStatus === "parsing"}
+                onClick={createAndAdd}
+              >
+                {loading ? "Добавляем…" : cvStatus === "parsing" ? "Дождитесь обработки файла…" : "Создать и добавить"}
               </button>
             </div>
           )}
