@@ -31,6 +31,7 @@ model User {
 
   company           Company?
   recruiterProfile  RecruiterProfile?
+  notifications     Notification[]
 
   @@map("users")
 }
@@ -217,6 +218,11 @@ enum KanbanStage {
   REJECTED
 }
 
+enum CandidateFileCategory {
+  RESUME
+  OTHER
+}
+
 model Candidate {
   id            String       @id @default(cuid())
   name          String
@@ -229,7 +235,7 @@ model Candidate {
   note          String?
   resumeFileName String?
   resumeFileType String?
-  resumeFileData String?     @db.Text // base64, без префикса data:...;base64,
+  resumeFileData String?     @db.Text // base64, без префикса data:...;base64, — легаси-поле, новые файлы идут через files
   createdAt     DateTime     @default(now())
 
   recruiterId   String
@@ -238,7 +244,24 @@ model Candidate {
   requestId     String?
   request       VacancyRequest?  @relation(fields: [requestId], references: [id], onDelete: SetNull)
 
+  files         CandidateFile[]
+
   @@map("candidates")
+}
+
+// Файлы кандидата, дозагруженные уже после создания карточки (резюме и прочее).
+model CandidateFile {
+  id          String                @id @default(cuid())
+  fileName    String
+  fileType    String?
+  fileData    String                @db.Text
+  category    CandidateFileCategory @default(OTHER)
+  createdAt   DateTime              @default(now())
+
+  candidateId String
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@map("candidate_files")
 }
 
 // ──────────────────────────────────────────────
@@ -288,4 +311,40 @@ model Withdrawal {
   recruiter   RecruiterProfile @relation(fields: [recruiterId], references: [id], onDelete: Cascade)
 
   @@map("withdrawals")
+}
+
+// ──────────────────────────────────────────────
+// Уведомления
+// ──────────────────────────────────────────────
+
+enum NotificationType {
+  MESSAGE
+  CANDIDATE_ADDED
+  INTERVIEW_SCHEDULED
+  RECRUITER_JOINED
+  HIRE_CONFIRMED
+  REQUEST_MODERATED
+  RECRUITER_VERIFIED
+  PAYOUT_RELEASED
+  WITHDRAWAL_REQUESTED
+  REVIEW_RECEIVED
+  REQUEST_AUTO_RELEASED
+  NEW_REQUEST_PENDING
+  RECRUITER_REGISTERED
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  type      NotificationType
+  title     String
+  body      String?
+  link      String?
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@map("notifications")
 }
