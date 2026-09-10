@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/currentUser";
+import { notifyCompany } from "@/lib/notify";
 
 const schema = z.object({ decision: z.enum(["APPROVED", "REJECTED"]) });
 
@@ -23,6 +24,16 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       status: parsed.data.decision === "APPROVED" ? "OPEN" : "CLOSED",
     },
   });
+
+  await notifyCompany(
+    updated.companyId,
+    "REQUEST_MODERATED",
+    parsed.data.decision === "APPROVED" ? "Заявка прошла модерацию" : "Заявка отклонена",
+    parsed.data.decision === "APPROVED"
+      ? `«${updated.title}» опубликована на бирже`
+      : `«${updated.title}» отклонена модератором`,
+    `/dashboard/requests/${updated.id}`
+  );
 
   return NextResponse.json(updated);
 }
