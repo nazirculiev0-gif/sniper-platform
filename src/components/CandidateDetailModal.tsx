@@ -53,6 +53,10 @@ const INTERVIEW_STATUS_LABEL: Record<string, { t: string; c: string }> = {
   CANCELLED: { t: "Отменено", c: "pill-mut" },
 };
 
+const DAY_LABELS = ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
+
+type AvailabilitySlot = { dayOfWeek: number; startTime: string; endTime: string };
+
 function fmtSum(n?: number | null) {
   if (!n) return "—";
   return n.toLocaleString("ru-RU") + " сум";
@@ -102,6 +106,7 @@ export default function CandidateDetailModal({
   const [newFormat, setNewFormat] = useState("online");
   const [newLocation, setNewLocation] = useState("");
   const [newNotes, setNewNotes] = useState("");
+  const [availSlots, setAvailSlots] = useState<AvailabilitySlot[]>([]);
 
   const searchStatus = candidate.searchStatus ? SEARCH_STATUS_LABEL[candidate.searchStatus] : null;
 
@@ -114,7 +119,12 @@ export default function CandidateDetailModal({
       .then((r) => (r.ok ? r.json() : []))
       .then((data) => setInterviews(data))
       .finally(() => setInterviewsLoading(false));
-  }, [candidate.id]);
+    if (canEdit) {
+      fetch(`/api/candidates/${candidate.id}/availability`)
+        .then((r) => (r.ok ? r.json() : []))
+        .then((data) => setAvailSlots(data));
+    }
+  }, [candidate.id, canEdit]);
 
   const openResume = async () => {
     setResumeError("");
@@ -281,6 +291,15 @@ export default function CandidateDetailModal({
       const updated = await res.json();
       setInterviews((prev) => prev.map((i) => (i.id === updated.id ? updated : i)));
     }
+  };
+
+  const isWithinAvailability = (whenLocal: string) => {
+    if (availSlots.length === 0) return true;
+    const d = new Date(whenLocal);
+    if (Number.isNaN(d.getTime())) return true;
+    const day = d.getDay();
+    const hm = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+    return availSlots.some((s) => s.dayOfWeek === day && hm >= s.startTime && hm < s.endTime);
   };
 
   const saveNote = async () => {
@@ -538,10 +557,24 @@ export default function CandidateDetailModal({
 
               {canEdit && showScheduleForm && (
                 <div className="card card-p" style={{ marginTop: 4 }}>
+                  {availSlots.length > 0 ? (
+                    <div className="hint" style={{ marginBottom: 10 }}>
+                      Работодатель доступен: {availSlots.map((s, i) => (
+                        <span key={i}>{i > 0 ? ", " : ""}{DAY_LABELS[s.dayOfWeek]} {s.startTime}–{s.endTime}</span>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="hint" style={{ marginBottom: 10 }}>Работодатель ещё не указал доступность — предложите удобное время и уточните в чате.</div>
+                  )}
                   <label className="fld">
                     <span>Дата и время <em>*</em></span>
                     <input className="inp" type="datetime-local" value={newWhen} onChange={(e) => setNewWhen(e.target.value)} />
                   </label>
+                  {newWhen && availSlots.length > 0 && !isWithinAvailability(newWhen) && (
+                    <div className="mini" style={{ color: "var(--warn)", marginTop: -10, marginBottom: 12 }}>
+                      ⚠ Это время вне обычной доступности работодателя — можно предложить, но лучше уточнить в чате.
+                    </div>
+                  )}
                   <label className="fld">
                     <span>Формат</span>
                     <select className="inp" value={newFormat} onChange={(e) => setNewFormat(e.target.value)}>
