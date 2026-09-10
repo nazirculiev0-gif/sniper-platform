@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/currentUser";
+import { notifyCompany } from "@/lib/notify";
 
 // POST /api/requests/:id/take — рекрутер берёт заявку в работу.
 // Фиксируется claimDeadline = сейчас + exclusiveDays (14 дней по ТЗ) —
@@ -55,6 +56,14 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
     },
     include: { participants: { include: { recruiter: true } } },
   });
+
+  await notifyCompany(
+    request.companyId,
+    "RECRUITER_JOINED",
+    "Рекрутер откликнулся на заявку",
+    `${user.recruiterProfile.name} откликнулся на «${request.title}»`,
+    `/dashboard/requests/${request.id}`
+  );
 
   return NextResponse.json(updated);
 }
