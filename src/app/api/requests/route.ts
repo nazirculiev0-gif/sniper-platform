@@ -47,18 +47,18 @@ const createSchema = z.object({
   skills: z.array(z.string()).default([]),
   salaryFrom: z.number().int().optional(),
   salaryTo: z.number().int().optional(),
-  mode: z.enum(["EXCLUSIVE", "OPEN"]).default("OPEN"),
-  tariffCategory: z.enum(["JUNIOR", "MIDDLE", "SENIOR", "LEAD", "TOP_MANAGEMENT"]),
+  tariffCategory: z.enum(["JUNIOR", "MIDDLE", "SENIOR", "LEAD", "TOP_MANAGEMENT"]).default("MIDDLE"),
   rewardGross: z.number().int().min(100_000, "Минимальное вознаграждение — 100 000 сум"),
   depositEnabled: z.boolean().default(true),
   guaranteeDays: z.number().int().default(GUARANTEE_DAYS),
 });
 
 // POST /api/requests — только работодатель.
-// Сумму вознаграждения работодатель указывает сам (rewardGross), грейд — только
-// фильтр для биржи. Депозит опционален (depositEnabled): если включён — 15% от
-// суммы считается внесённым сразу (эмуляция оплаты — в реальной системе здесь
-// вызов Payme/Click). Заявка в любом случае уходит на модерацию.
+// Сумму вознаграждения работодатель указывает сам (rewardGross), грейд — необязательная
+// служебная метка. Откликнуться на заявку может любое число рекрутеров — эксклюзивности
+// больше нет, режим всегда "OPEN": работодатель сам выбирает, чьего кандидата нанять.
+// Депозит опционален (depositEnabled): если включён — 50% от суммы считается внесённым
+// сразу (эмуляция оплаты — в реальной системе здесь вызов Payme/Click).
 export async function POST(req: Request) {
   const user = await getCurrentUser();
   if (!user || user.role !== "EMPLOYER") {
@@ -80,7 +80,7 @@ export async function POST(req: Request) {
       skills: parsed.data.skills,
       salaryFrom: parsed.data.salaryFrom,
       salaryTo: parsed.data.salaryTo,
-      mode: parsed.data.mode,
+      mode: "OPEN",
       tariffCategory: parsed.data.tariffCategory,
       rewardGross,
       depositAmount: deposit,
