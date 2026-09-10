@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/currentUser";
+import { notifyAdmins } from "@/lib/notify";
 
 const schema = z.object({ amount: z.number().int().positive() });
 
@@ -29,17 +30,12 @@ export async function POST(req: Request) {
     }),
   ]);
 
-  return NextResponse.json(withdrawal, { status: 201 });
-}
+  await notifyAdmins(
+    "WITHDRAWAL_REQUESTED",
+    "Запрос на вывод средств",
+    `${user.recruiterProfile.name} запросил вывод ${parsed.data.amount.toLocaleString("ru-RU")} сум`,
+    "/dashboard/admin/finance"
+  );
 
-export async function GET() {
-  const user = await getCurrentUser();
-  if (!user || user.role !== "RECRUITER" || !user.recruiterProfile) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-  const withdrawals = await prisma.withdrawal.findMany({
-    where: { recruiterId: user.recruiterProfile.id },
-    orderBy: { requestedAt: "desc" },
-  });
-  return NextResponse.json(withdrawals);
+  return NextResponse.json(withdrawal, { status: 201 });
 }
