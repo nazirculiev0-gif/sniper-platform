@@ -12,10 +12,11 @@ const schema = z.object({
     "OFFER_ACCEPTED",
     "HIRED",
     "REJECTED",
-  ]),
+  ]).optional(),
+  note: z.string().max(2000).optional(),
 });
 
-// PATCH /api/candidates/:id — сменить этап канбана
+// PATCH /api/candidates/:id — сменить этап канбана и/или сохранить заметку
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   const user = await getCurrentUser();
   if (!user || user.role !== "RECRUITER" || !user.recruiterProfile) {
@@ -31,10 +32,16 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
+  if (parsed.data.stage === undefined && parsed.data.note === undefined) {
+    return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
+  }
 
   const updated = await prisma.candidate.update({
     where: { id: params.id },
-    data: { stage: parsed.data.stage },
+    data: {
+      ...(parsed.data.stage !== undefined ? { stage: parsed.data.stage } : {}),
+      ...(parsed.data.note !== undefined ? { note: parsed.data.note } : {}),
+    },
   });
 
   return NextResponse.json(updated);
