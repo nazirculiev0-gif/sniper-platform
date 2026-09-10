@@ -79,6 +79,7 @@ export default async function RequestDetailPage({ params }: { params: { id: stri
       candidates={JSON.parse(JSON.stringify(request.candidates))}
       role={user.role}
       canEdit={canEditKanban}
+      currentRecruiterId={user.recruiterProfile?.id ?? null}
       canConfirmHire={user.role === "EMPLOYER"}
       payoutExists={!!request.payout}
       addButton={canEditKanban ? <AddCandidateButton requestId={request.id} /> : undefined}
