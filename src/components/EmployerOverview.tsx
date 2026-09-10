@@ -106,7 +106,7 @@ export default async function EmployerOverview({ companyId }: { companyId: strin
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <b className="mini" style={{ display: "block" }}>{r.title}</b>
-                  <div className="mini muted">{tariff?.label} · {r.mode === "EXCLUSIVE" ? "Эксклюзив" : "Ташкент"}</div>
+                  <div className="mini muted">{tariff?.label} · Ташкент</div>
                 </div>
                 <span className={`pill ${st.c}`} style={{ flexShrink: 0 }}>{st.t}</span>
               </div>
@@ -115,7 +115,6 @@ export default async function EmployerOverview({ companyId }: { companyId: strin
                   <span className="tag">{fmtSum(r.salaryFrom)} – {fmtSum(r.salaryTo)}</span>
                 )}
                 <span className="tag">{r._count.candidates} канд.</span>
-                {r.mode === "EXCLUSIVE" && <span className="tag" style={{ color: "var(--red)" }}>Эксклюзив</span>}
                 {r.depositPaid && <span className="tag" style={{ color: "var(--ok)" }}>Депозит</span>}
               </div>
               {r.participants.slice(0, 2).map((p) => (
@@ -123,7 +122,7 @@ export default async function EmployerOverview({ companyId }: { companyId: strin
               ))}
               <div className="flex" style={{ justifyContent: "space-between", marginTop: 10, alignItems: "center" }}>
                 {left !== null ? (
-                  <span className="mini muted">⏱ {left <= 0 ? "сегодня" : `${left} дн. эксклюзива`}</span>
+                  <span className="mini muted">⏱ {left <= 0 ? "сегодня" : `${left} дн. до автовозврата`}</span>
                 ) : <span />}
                 <b className="sg" style={{ fontSize: 15 }}>{fmtSum(r.rewardGross)}</b>
               </div>
