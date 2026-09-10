@@ -106,8 +106,11 @@ export default function Exchange({ requests, verified }: { requests: any[]; veri
                 {r.description.length > 100 ? r.description.slice(0, 100) + "…" : r.description}
               </p>
               <div className="card-p" style={{ padding: 0, marginBottom: 12 }}>
-                <div className="mini muted">Вознаграждение за эксклюзив</div>
+                <div className="mini muted">{r.mode === "EXCLUSIVE" ? "Вознаграждение за эксклюзив" : "Вознаграждение за подбор"}</div>
                 <b className="sg" style={{ fontSize: 17 }}>{fmtSum(r.rewardGross)}</b>
+                {(r.salaryFrom || r.salaryTo) && (
+                  <div className="mini muted" style={{ marginTop: 2 }}>ЗП кандидату: {fmtSum(r.salaryFrom)} – {fmtSum(r.salaryTo)}</div>
+                )}
               </div>
               <div className="flex gap8">
                 <Link href={`/dashboard/requests/${r.id}`} className="btn btn-ghost btn-sm">Вопрос</Link>
