@@ -12,6 +12,22 @@ export async function GET() {
 
   const candidates = await prisma.candidate.findMany({
     where: { recruiterId: user.recruiterProfile.id, requestId: null },
+    select: {
+      id: true,
+      name: true,
+      profession: true,
+      skills: true,
+      expSalary: true,
+      searchStatus: true,
+      source: true,
+      stage: true,
+      note: true,
+      createdAt: true,
+      recruiterId: true,
+      requestId: true,
+      resumeFileName: true,
+      resumeFileType: true,
+    },
     orderBy: { createdAt: "desc" },
   });
 
