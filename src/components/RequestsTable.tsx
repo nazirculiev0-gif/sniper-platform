@@ -53,7 +53,7 @@ export default function RequestsTable({ requests, role }: { requests: any[]; rol
             <thead>
               <tr>
                 <th>Вакансия</th>
-                <th>Режим</th>
+                <th>Метки</th>
                 {role === "EMPLOYER" && <th>Рекрутер(ы)</th>}
                 <th className="r">Кандидаты</th>
                 <th className="r">Вознагр.</th>
@@ -72,10 +72,9 @@ export default function RequestsTable({ requests, role }: { requests: any[]; rol
                     </td>
                     <td>
                       <div className="flex gap8 wrapf">
-                        {r.mode === "EXCLUSIVE" && <span className="tag" style={{ color: "var(--red)" }}>Эксклюзив</span>}
                         {r.depositPaid && <span className="tag" style={{ color: "var(--ok)" }}>Депозит</span>}
-                        {r.mode === "OPEN" && r.participants.length > 0 && (
-                          <span className="tag">Открытый · {r.participants.length}</span>
+                        {r.participants.length > 0 && (
+                          <span className="tag">Рекрутеров · {r.participants.length}</span>
                         )}
                       </div>
                     </td>
