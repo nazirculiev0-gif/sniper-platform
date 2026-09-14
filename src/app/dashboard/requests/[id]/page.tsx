@@ -70,6 +70,15 @@ export default async function RequestDetailPage({ params }: { params: { id: stri
     user.role === "RECRUITER" &&
     request.participants.some((p) => p.recruiterId === user.recruiterProfile?.id);
 
+  const isOwnerEmployer = user.role === "EMPLOYER" && request.companyId === user.company?.id;
+  const isLiveOnExchange = request.moderation === "APPROVED" && (request.status === "OPEN" || request.status === "IN_PROGRESS");
+  const canView =
+    user.role === "ADMIN" ||
+    isOwnerEmployer ||
+    isParticipant ||
+    (user.role === "RECRUITER" && isLiveOnExchange);
+  if (!canView) notFound();
+
   const st = STATUS_LABEL[request.status];
   const canEditKanban = user.role === "RECRUITER" && isParticipant;
   const showChat = user.role === "EMPLOYER" || isParticipant;
