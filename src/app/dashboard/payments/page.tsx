@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/currentUser";
 import { prisma } from "@/lib/prisma";
 import WithdrawSection from "@/components/WithdrawSection";
+import PaymentCardSection from "@/components/PaymentCardSection";
 
 function fmtSum(n?: number | null) {
   if (!n) return "0 сум";
@@ -60,7 +61,19 @@ export default async function RecruiterPaymentsPage() {
         </div>
       </div>
 
-      <WithdrawSection balance={user.recruiterProfile.balance} withdrawals={JSON.parse(JSON.stringify(withdrawals))} />
+      <PaymentCardSection
+        cardLast4={user.recruiterProfile.cardLast4}
+        cardBrand={user.recruiterProfile.cardBrand}
+        cardHolder={user.recruiterProfile.cardHolder}
+        isSelfEmployed={user.recruiterProfile.isSelfEmployed}
+        taxId={user.recruiterProfile.taxId}
+      />
+
+      <WithdrawSection
+        balance={user.recruiterProfile.balance}
+        withdrawals={JSON.parse(JSON.stringify(withdrawals))}
+        hasCard={!!user.recruiterProfile.cardLast4}
+      />
 
       <div className="sectit" style={{ fontSize: 15, margin: "20px 0 10px" }}>Начисления по вакансиям</div>
       {payouts.length === 0 && <div className="card card-p mini muted">Пока нет закрытых вакансий.</div>}
