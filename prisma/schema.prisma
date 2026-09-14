@@ -263,6 +263,10 @@ model Candidate {
   gender        String?      // M | F
   age           Int?
   phone         String?
+  city          String?
+  languages     String[]     @default([])
+  tags          String[]     @default([])
+  willingToRelocate Boolean  @default(false)
   desiredPositions String[]  @default([])
   industry      String?
   currentEmployer String?
