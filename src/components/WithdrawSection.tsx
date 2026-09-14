@@ -14,7 +14,7 @@ const STATUS: Record<string, { t: string; c: string }> = {
   REJECTED: { t: "Отклонено", c: "pill-red" },
 };
 
-export default function WithdrawSection({ balance, withdrawals }: { balance: number; withdrawals: any[] }) {
+export default function WithdrawSection({ balance, withdrawals, hasCard }: { balance: number; withdrawals: any[]; hasCard: boolean }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState(String(balance));
@@ -41,11 +41,12 @@ export default function WithdrawSection({ balance, withdrawals }: { balance: num
 
   return (
     <div>
-      <div className="flex gap8" style={{ marginBottom: 14 }}>
-        <button className="btn btn-red btn-sm" disabled={balance <= 0} onClick={() => { setAmount(String(balance)); setOpen(true); }}>
+      <div className="flex gap8" style={{ marginBottom: 14, alignItems: "center" }}>
+        <button className="btn btn-red btn-sm" disabled={balance <= 0 || !hasCard} onClick={() => { setAmount(String(balance)); setOpen(true); }}>
           Запросить вывод средств
         </button>
         {balance <= 0 && <span className="mini muted">Нет доступного баланса для вывода</span>}
+        {balance > 0 && !hasCard && <span className="mini muted">Сначала привяжите карту выше</span>}
       </div>
 
       {open && (
