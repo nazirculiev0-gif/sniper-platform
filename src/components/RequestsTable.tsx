@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { TARIFFS } from "@/lib/tariffs";
+import { exportToCsv } from "@/lib/exportCsv";
 
 function fmtSum(n?: number | null) {
   if (!n) return "—";
@@ -27,13 +28,40 @@ const TABS = [
 
 export default function RequestsTable({ requests, role }: { requests: any[]; role: string }) {
   const [tab, setTab] = useState("all");
+  const [query, setQuery] = useState("");
 
-  const list =
-    tab === "all" ? requests : requests.filter((r) => TABS.find((t) => t.key === tab)?.statuses?.includes(r.status));
+  const list = useMemo(() => {
+    let l =
+      tab === "all" ? requests : requests.filter((r) => TABS.find((t) => t.key === tab)?.statuses?.includes(r.status));
+    if (query.trim()) {
+      const q = query.trim().toLowerCase();
+      l = l.filter((r) => r.title.toLowerCase().includes(q));
+    }
+    return l;
+  }, [requests, tab, query]);
+
+  const exportList = () => {
+    exportToCsv(
+      `заявки-${new Date().toISOString().slice(0, 10)}.csv`,
+      list.map((r) => {
+        const st = STATUS_LABEL[r.status];
+        const tariff = TARIFFS[r.tariffCategory as keyof typeof TARIFFS];
+        return {
+          Вакансия: r.title,
+          Грейд: tariff?.label ?? "",
+          Статус: st.t,
+          Депозит: r.depositPaid ? "Да" : "Нет",
+          Рекрутеров: r.participants.length,
+          Кандидатов: r._count?.candidates ?? 0,
+          "Вознаграждение, сум": r.rewardGross,
+        };
+      })
+    );
+  };
 
   return (
     <div>
-      <div className="flex gap8" style={{ marginBottom: 14 }}>
+      <div className="flex gap8 wrapf" style={{ marginBottom: 14, alignItems: "center" }}>
         {TABS.map((t) => (
           <button
             key={t.key}
@@ -43,6 +71,16 @@ export default function RequestsTable({ requests, role }: { requests: any[]; rol
             {t.label}
           </button>
         ))}
+        <input
+          className="inp"
+          style={{ flex: 1, minWidth: 180, marginLeft: 8 }}
+          placeholder="Поиск по названию…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+        <button className="btn btn-ghost btn-sm" disabled={list.length === 0} onClick={exportList}>
+          Экспорт в Excel
+        </button>
       </div>
 
       {list.length === 0 && <div className="card card-p mini muted">Ничего не найдено.</div>}
