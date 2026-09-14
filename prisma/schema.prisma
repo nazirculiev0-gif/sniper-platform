@@ -79,6 +79,11 @@ model RecruiterProfile {
   specializations String[]    @default([])
   regions       String[]      @default([])
   yearsExperience Int?
+  cardLast4     String?
+  cardBrand     String?      // Humo | Uzcard | Visa | Mastercard
+  cardHolder    String?
+  isSelfEmployed Boolean     @default(false)
+  taxId         String?      // ИНН / ПИНФЛ — для самозанятых
   createdAt     DateTime      @default(now())
 
   userId        String        @unique
@@ -257,6 +262,7 @@ model Candidate {
   note          String?
   gender        String?      // M | F
   age           Int?
+  phone         String?
   desiredPositions String[]  @default([])
   industry      String?
   currentEmployer String?
