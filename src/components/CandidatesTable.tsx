@@ -106,6 +106,7 @@ export default function CandidatesTable({ candidates, interviewsCount }: { candi
                 <th>Кандидат</th>
                 <th>Пол</th>
                 <th>Возраст</th>
+                <th>Телефон</th>
                 <th>Профессия</th>
                 <th>Желательные должности</th>
                 <th>Отрасль</th>
@@ -133,6 +134,7 @@ export default function CandidatesTable({ candidates, interviewsCount }: { candi
                     </td>
                     <td className="mini">{c.gender ? GENDER_LABEL[c.gender] : "—"}</td>
                     <td className="mini">{c.age ?? "—"}</td>
+                    <td className="mini">{c.phone || "—"}</td>
                     <td className="mini">{c.profession || "—"}</td>
                     <td className="mini">{c.desiredPositions?.length > 0 ? c.desiredPositions.join(", ") : "—"}</td>
                     <td className="mini">{c.industry || "—"}</td>
