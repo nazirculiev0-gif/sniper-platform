@@ -17,6 +17,7 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const justVerified = searchParams.get("verified") === "1";
+  const justReset = searchParams.get("reset") === "1";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -52,6 +53,9 @@ function LoginForm() {
         {justVerified && (
           <div className="mini" style={{ color: "var(--ok)", marginBottom: 14 }}>Email подтверждён — теперь можно войти.</div>
         )}
+        {justReset && (
+          <div className="mini" style={{ color: "var(--ok)", marginBottom: 14 }}>Пароль изменён — войдите с новым паролем.</div>
+        )}
 
         <label className="fld">
           <span>Email</span>
@@ -61,6 +65,9 @@ function LoginForm() {
           <span>Пароль</span>
           <input className="inp" type="password" required value={password} onChange={e => setPassword(e.target.value)} />
         </label>
+        <div style={{ textAlign: "right", marginTop: -10, marginBottom: 14 }}>
+          <Link href="/forgot-password" className="mini muted">Забыли пароль?</Link>
+        </div>
 
         {error && <div className="mini" style={{ color: "var(--red)", marginBottom: 10 }}>{error}</div>}
         {needsVerification && (
