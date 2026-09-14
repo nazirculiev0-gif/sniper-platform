@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/currentUser";
 import { prisma } from "@/lib/prisma";
 import WithdrawSection from "@/components/WithdrawSection";
 import PaymentCardSection from "@/components/PaymentCardSection";
+import EmployerPaymentsView from "@/components/EmployerPaymentsView";
 
 function fmtSum(n?: number | null) {
   if (!n) return "0 сум";
@@ -16,9 +17,29 @@ const PAYOUT_STATUS: Record<string, { t: string; c: string }> = {
   REFUNDED: { t: "Возврат", c: "pill-red" },
 };
 
-export default async function RecruiterPaymentsPage() {
+export default async function PaymentsPage() {
   const user = await getCurrentUser();
-  if (!user || user.role !== "RECRUITER" || !user.recruiterProfile) redirect("/dashboard");
+  if (!user) redirect("/dashboard");
+
+  if (user.role === "EMPLOYER" && user.company) {
+    const requests = await prisma.vacancyRequest.findMany({
+      where: { companyId: user.company.id },
+      include: { payout: true },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return (
+      <div>
+        <div className="card-h" style={{ border: "none", padding: "0 0 10px" }}>
+          <h3>Финансы</h3>
+          <div className="sub">Депозиты, эскроу и выплаты рекрутерам по вашим вакансиям</div>
+        </div>
+        <EmployerPaymentsView requests={JSON.parse(JSON.stringify(requests))} />
+      </div>
+    );
+  }
+
+  if (user.role !== "RECRUITER" || !user.recruiterProfile) redirect("/dashboard");
 
   const [payouts, withdrawals] = await Promise.all([
     prisma.payout.findMany({
