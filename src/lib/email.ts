@@ -52,3 +52,47 @@ export async function sendVerificationEmail(to: string, code: string) {
 export function generateVerificationCode() {
   return String(Math.floor(100000 + Math.random() * 900000)); // 6 цифр
 }
+
+export async function sendPasswordResetEmail(to: string, resetUrl: string) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.error("RESEND_API_KEY не задан — письмо со сбросом пароля не отправлено");
+    return { ok: false };
+  }
+
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: FROM_ADDRESS,
+        to: [to],
+        subject: "Восстановление пароля",
+        html: `
+          <div style="font-family: -apple-system, Arial, sans-serif; max-width: 420px; margin: 0 auto; padding: 24px;">
+            <div style="font-size: 20px; font-weight: 700; margin-bottom: 16px;">
+              SNIP<span style="color:#D4003B">E</span>R
+            </div>
+            <p style="font-size: 15px; color: #333;">Запрошено восстановление пароля. Нажмите на кнопку ниже, чтобы задать новый пароль:</p>
+            <a href="${resetUrl}" style="display: inline-block; background: #D4003B; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; margin: 16px 0;">
+              Сбросить пароль
+            </a>
+            <p style="font-size: 13px; color: #888;">Ссылка действительна 1 час. Если вы не запрашивали восстановление — просто проигнорируйте это письмо, пароль останется прежним.</p>
+          </div>
+        `,
+      }),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      console.error("Resend API error:", res.status, text);
+      return { ok: false };
+    }
+    return { ok: true };
+  } catch (err) {
+    console.error("Не удалось отправить письмо через Resend:", err);
+    return { ok: false };
+  }
+}
