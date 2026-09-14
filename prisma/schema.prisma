@@ -38,8 +38,43 @@ model User {
   company           Company?
   recruiterProfile  RecruiterProfile?
   notifications     Notification[]
+  supportThread     SupportThread?
 
   @@map("users")
+}
+
+enum SupportThreadStatus {
+  OPEN
+  CLOSED
+}
+
+// Один тред поддержки на пользователя — переписка с администрацией платформы.
+model SupportThread {
+  id        String              @id @default(cuid())
+  status    SupportThreadStatus @default(OPEN)
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  messages  SupportMessage[]
+
+  @@map("support_threads")
+}
+
+model SupportMessage {
+  id          String   @id @default(cuid())
+  text        String
+  fromAdmin   Boolean  @default(false)
+  readByUser  Boolean  @default(false)
+  readByAdmin Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  threadId    String
+  thread      SupportThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@map("support_messages")
 }
 
 model Company {
@@ -394,6 +429,7 @@ enum NotificationType {
   INTERVIEW_CANCELLED
   WITHDRAWAL_PAID
   WITHDRAWAL_REJECTED
+  SUPPORT_MESSAGE
 }
 
 model Notification {
