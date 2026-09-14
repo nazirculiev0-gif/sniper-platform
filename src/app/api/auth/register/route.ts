@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { notifyAdmins } from "@/lib/notify";
+import { sendVerificationEmail, generateVerificationCode } from "@/lib/email";
 
 const schema = z.object({
   email: z.string().email(),
@@ -25,26 +25,23 @@ export async function POST(req: Request) {
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
+  const code = generateVerificationCode();
+  const verificationExpires = new Date(Date.now() + 15 * 60 * 1000);
 
   const user = await prisma.user.create({
     data: {
       email,
       passwordHash,
       role,
+      verificationCode: code,
+      verificationExpires,
       ...(role === "EMPLOYER"
         ? { company: { create: { name } } }
         : { recruiterProfile: { create: { name } } }),
     },
   });
 
-  if (role === "RECRUITER") {
-    await notifyAdmins(
-      "RECRUITER_REGISTERED",
-      "Новый рекрутер зарегистрировался",
-      `${name} ожидает верификации`,
-      "/dashboard/admin/recruiters"
-    );
-  }
+  await sendVerificationEmail(email, code);
 
-  return NextResponse.json({ id: user.id, email: user.email, role: user.role });
+  return NextResponse.json({ id: user.id, email: user.email, role: user.role, verificationRequired: true });
 }
