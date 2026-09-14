@@ -83,6 +83,23 @@ export default function CandidateDetailModal({
   const [note, setNote] = useState(candidate.note ?? "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [profileError, setProfileError] = useState("");
+
+  const [pName, setPName] = useState(candidate.name ?? "");
+  const [pProfession, setPProfession] = useState(candidate.profession ?? "");
+  const [pGender, setPGender] = useState(candidate.gender ?? "");
+  const [pAge, setPAge] = useState(candidate.age != null ? String(candidate.age) : "");
+  const [pPhone, setPPhone] = useState(candidate.phone ?? "");
+  const [pCity, setPCity] = useState(candidate.city ?? "");
+  const [pDesiredPositions, setPDesiredPositions] = useState((candidate.desiredPositions ?? []).join(", "));
+  const [pIndustry, setPIndustry] = useState(candidate.industry ?? "");
+  const [pSearchStatus, setPSearchStatus] = useState(candidate.searchStatus ?? "active");
+  const [pCurrentEmployer, setPCurrentEmployer] = useState(candidate.currentEmployer ?? "");
+  const [pExpSalary, setPExpSalary] = useState(candidate.expSalary != null ? String(candidate.expSalary) : "");
+  const [pSkills, setPSkills] = useState((candidate.skills ?? []).join(", "));
+  const [pLanguages, setPLanguages] = useState((candidate.languages ?? []).join(", "));
+  const [pTags, setPTags] = useState((candidate.tags ?? []).join(", "));
+  const [pWillingToRelocate, setPWillingToRelocate] = useState(!!candidate.willingToRelocate);
 
   const [resumeUrl, setResumeUrl] = useState<string | null>(null);
   const [resumeLoading, setResumeLoading] = useState(false);
@@ -302,13 +319,35 @@ export default function CandidateDetailModal({
     return availSlots.some((s) => s.dayOfWeek === day && hm >= s.startTime && hm < s.endTime);
   };
 
-  const saveNote = async () => {
+  const saveProfile = async () => {
+    if (!pName.trim()) {
+      setProfileError("ФИО не может быть пустым");
+      return;
+    }
+    setProfileError("");
     setSaving(true);
     setSaved(false);
     const res = await fetch(`/api/candidates/${candidate.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ note }),
+      body: JSON.stringify({
+        name: pName,
+        profession: pProfession || undefined,
+        gender: pGender || undefined,
+        age: pAge ? Number(pAge) : undefined,
+        phone: pPhone || undefined,
+        city: pCity || undefined,
+        desiredPositions: pDesiredPositions.split(",").map((s) => s.trim()).filter(Boolean),
+        industry: pIndustry || undefined,
+        searchStatus: pSearchStatus || undefined,
+        currentEmployer: pCurrentEmployer || undefined,
+        expSalary: pExpSalary ? Number(pExpSalary.replace(/\D/g, "")) : undefined,
+        skills: pSkills.split(",").map((s) => s.trim()).filter(Boolean),
+        languages: pLanguages.split(",").map((s) => s.trim()).filter(Boolean),
+        tags: pTags.split(",").map((s) => s.trim()).filter(Boolean),
+        willingToRelocate: pWillingToRelocate,
+        note,
+      }),
     });
     setSaving(false);
     if (res.ok) {
@@ -316,6 +355,8 @@ export default function CandidateDetailModal({
       setSaved(true);
       onUpdated?.(updated);
       router.refresh();
+    } else {
+      setProfileError("Не удалось сохранить изменения");
     }
   };
 
@@ -339,11 +380,16 @@ export default function CandidateDetailModal({
               {candidate.name.split(" ").map((w: string) => w[0]).slice(0, 2).join("")}
             </div>
             <div>
-              <div className="flex gap8" style={{ alignItems: "center" }}>
+              <div className="flex gap8 wrapf" style={{ alignItems: "center" }}>
                 <b className="sg" style={{ fontSize: 15 }}>{candidate.name}</b>
                 {searchStatus && <span className={`pill ${searchStatus.c}`}>{searchStatus.t}</span>}
+                {candidate.tags?.map((t: string) => <span key={t} className="tag">{t}</span>)}
               </div>
-              <div className="mini muted">{candidate.profession || "Профессия не указана"}</div>
+              <div className="mini muted">
+                {candidate.profession || "Профессия не указана"}
+                {candidate.city ? ` · ${candidate.city}` : ""}
+                {candidate.age ? ` · ${candidate.age} лет` : ""}
+              </div>
             </div>
           </div>
         </div>
@@ -363,38 +409,121 @@ export default function CandidateDetailModal({
         <div style={{ padding: 18 }}>
           {tab === "profile" && (
             <div>
-              <div style={{ display: "grid", gap: 10, marginBottom: 16 }}>
-                <div className="flex" style={{ justifyContent: "space-between" }}>
-                  <span className="mini muted">Профессия</span>
-                  <b className="mini">{candidate.profession || "—"}</b>
-                </div>
-                {candidate.phone && (
-                  <div className="flex" style={{ justifyContent: "space-between" }}>
-                    <span className="mini muted">Телефон</span>
-                    <b className="mini">{candidate.phone}</b>
+              {canEdit ? (
+                <>
+                  <div className="flex gap8" style={{ marginBottom: 10 }}>
+                    <label className="fld" style={{ marginBottom: 0, flex: 1 }}>
+                      <span>ФИО <em>*</em></span>
+                      <input className="inp" value={pName} onChange={(e) => setPName(e.target.value)} />
+                    </label>
+                    <label className="fld" style={{ marginBottom: 0, flex: 1 }}>
+                      <span>Профессия</span>
+                      <input className="inp" value={pProfession} onChange={(e) => setPProfession(e.target.value)} />
+                    </label>
                   </div>
-                )}
-                <div className="flex" style={{ justifyContent: "space-between" }}>
-                  <span className="mini muted">Ожидаемая ЗП</span>
-                  <b className="mini">{fmtSum(candidate.expSalary)}</b>
-                </div>
-                <div className="flex" style={{ justifyContent: "space-between" }}>
-                  <span className="mini muted">Источник</span>
-                  <b className="mini">{candidate.source || "—"}</b>
-                </div>
-                <div className="flex" style={{ justifyContent: "space-between" }}>
-                  <span className="mini muted">Добавлен</span>
-                  <b className="mini">{fmtDate(candidate.createdAt)}</b>
-                </div>
-                {candidate.recruiter?.name && (
-                  <div className="flex" style={{ justifyContent: "space-between" }}>
-                    <span className="mini muted">Рекрутер</span>
-                    <b className="mini">{candidate.recruiter.name}</b>
+                  <div className="flex gap8" style={{ marginBottom: 10 }}>
+                    <label className="fld" style={{ marginBottom: 0, flex: 1 }}>
+                      <span>Пол</span>
+                      <select className="inp" value={pGender} onChange={(e) => setPGender(e.target.value)}>
+                        <option value="">Не указан</option>
+                        <option value="M">Мужской</option>
+                        <option value="F">Женский</option>
+                      </select>
+                    </label>
+                    <label className="fld" style={{ marginBottom: 0, flex: 1 }}>
+                      <span>Возраст</span>
+                      <input className="inp" type="number" min={14} max={100} value={pAge} onChange={(e) => setPAge(e.target.value)} />
+                    </label>
+                    <label className="fld" style={{ marginBottom: 0, flex: 1 }}>
+                      <span>Телефон</span>
+                      <input className="inp" value={pPhone} onChange={(e) => setPPhone(e.target.value)} placeholder="+998 90 123 45 67" />
+                    </label>
                   </div>
-                )}
-              </div>
+                  <div className="flex gap8" style={{ marginBottom: 10 }}>
+                    <label className="fld" style={{ marginBottom: 0, flex: 1 }}>
+                      <span>Город</span>
+                      <input className="inp" value={pCity} onChange={(e) => setPCity(e.target.value)} placeholder="Ташкент" />
+                    </label>
+                    <label className="fld" style={{ marginBottom: 0, flex: 1 }}>
+                      <span>Отрасль</span>
+                      <input className="inp" value={pIndustry} onChange={(e) => setPIndustry(e.target.value)} placeholder="Финансы и бухгалтерия" />
+                    </label>
+                  </div>
+                  <label className="fld">
+                    <span>Желательные должности (через запятую)</span>
+                    <input className="inp" value={pDesiredPositions} onChange={(e) => setPDesiredPositions(e.target.value)} placeholder="Главбух, Финансовый директор" />
+                  </label>
+                  <div className="flex gap8" style={{ marginBottom: 10 }}>
+                    <label className="fld" style={{ marginBottom: 0, flex: 1 }}>
+                      <span>Статус поиска</span>
+                      <select className="inp" value={pSearchStatus} onChange={(e) => setPSearchStatus(e.target.value)}>
+                        <option value="active">Активно ищет</option>
+                        <option value="passive">Пассивно смотрит</option>
+                        <option value="employed">Трудоустроен</option>
+                      </select>
+                    </label>
+                    <label className="fld" style={{ marginBottom: 0, flex: 1 }}>
+                      <span>Текущее место работы</span>
+                      <input className="inp" value={pCurrentEmployer} onChange={(e) => setPCurrentEmployer(e.target.value)} />
+                    </label>
+                  </div>
+                  <label className="fld">
+                    <span>Ожидаемая ЗП, сум</span>
+                    <input className="inp" value={pExpSalary} onChange={(e) => setPExpSalary(e.target.value)} />
+                  </label>
+                  <label className="fld">
+                    <span>Навыки (через запятую)</span>
+                    <input className="inp" value={pSkills} onChange={(e) => setPSkills(e.target.value)} />
+                  </label>
+                  <div className="flex gap8" style={{ marginBottom: 10 }}>
+                    <label className="fld" style={{ marginBottom: 0, flex: 1 }}>
+                      <span>Языки (через запятую)</span>
+                      <input className="inp" value={pLanguages} onChange={(e) => setPLanguages(e.target.value)} placeholder="Русский, Узбекский" />
+                    </label>
+                    <label className="fld" style={{ marginBottom: 0, flex: 1 }}>
+                      <span>Теги (через запятую)</span>
+                      <input className="inp" value={pTags} onChange={(e) => setPTags(e.target.value)} placeholder="Проверенный, МСФО" />
+                    </label>
+                  </div>
+                  <label className="fld" style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                    <input type="checkbox" checked={pWillingToRelocate} onChange={(e) => setPWillingToRelocate(e.target.checked)} />
+                    <span>Готов(а) к релокации</span>
+                  </label>
+                </>
+              ) : (
+                <div style={{ display: "grid", gap: 10, marginBottom: 16 }}>
+                  <div className="flex" style={{ justifyContent: "space-between" }}>
+                    <span className="mini muted">Профессия</span>
+                    <b className="mini">{candidate.profession || "—"}</b>
+                  </div>
+                  {candidate.phone && (
+                    <div className="flex" style={{ justifyContent: "space-between" }}>
+                      <span className="mini muted">Телефон</span>
+                      <b className="mini">{candidate.phone}</b>
+                    </div>
+                  )}
+                  <div className="flex" style={{ justifyContent: "space-between" }}>
+                    <span className="mini muted">Ожидаемая ЗП</span>
+                    <b className="mini">{fmtSum(candidate.expSalary)}</b>
+                  </div>
+                  <div className="flex" style={{ justifyContent: "space-between" }}>
+                    <span className="mini muted">Источник</span>
+                    <b className="mini">{candidate.source || "—"}</b>
+                  </div>
+                  <div className="flex" style={{ justifyContent: "space-between" }}>
+                    <span className="mini muted">Добавлен</span>
+                    <b className="mini">{fmtDate(candidate.createdAt)}</b>
+                  </div>
+                  {candidate.recruiter?.name && (
+                    <div className="flex" style={{ justifyContent: "space-between" }}>
+                      <span className="mini muted">Рекрутер</span>
+                      <b className="mini">{candidate.recruiter.name}</b>
+                    </div>
+                  )}
+                </div>
+              )}
 
-              {candidate.skills?.length > 0 && (
+              {!canEdit && candidate.skills?.length > 0 && (
                 <>
                   <div className="mini muted" style={{ marginBottom: 6 }}>Навыки</div>
                   <div className="flex gap8 wrapf" style={{ marginBottom: 16 }}>
@@ -403,9 +532,11 @@ export default function CandidateDetailModal({
                 </>
               )}
 
-              <div className="card card-p" style={{ background: "var(--okbg)", borderColor: "transparent", marginBottom: 16 }}>
-                <span className="mini">По текущей заявке: этап <b>{STAGE_LABEL[candidate.stage] || candidate.stage}</b></span>
-              </div>
+              {candidate.requestId && (
+                <div className="card card-p" style={{ background: "var(--okbg)", borderColor: "transparent", marginBottom: 16 }}>
+                  <span className="mini">По текущей заявке: этап <b>{STAGE_LABEL[candidate.stage] || candidate.stage}</b></span>
+                </div>
+              )}
 
               <label className="fld">
                 <span>Заметки</span>
@@ -418,10 +549,11 @@ export default function CandidateDetailModal({
                   style={{ minHeight: 80 }}
                 />
               </label>
+              {profileError && <div className="mini" style={{ color: "var(--red)", marginBottom: 10 }}>{profileError}</div>}
               {canEdit && (
                 <div className="flex gap8" style={{ alignItems: "center" }}>
-                  <button className="btn btn-red btn-sm" disabled={saving} onClick={saveNote}>
-                    {saving ? "Сохраняем…" : "Сохранить заметку"}
+                  <button className="btn btn-red btn-sm" disabled={saving} onClick={saveProfile}>
+                    {saving ? "Сохраняем…" : "Сохранить"}
                   </button>
                   {saved && <span className="mini" style={{ color: "var(--ok)" }}>Сохранено</span>}
                 </div>
