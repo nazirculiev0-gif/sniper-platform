@@ -368,6 +368,12 @@ export default function CandidateDetailModal({
                   <span className="mini muted">Профессия</span>
                   <b className="mini">{candidate.profession || "—"}</b>
                 </div>
+                {candidate.phone && (
+                  <div className="flex" style={{ justifyContent: "space-between" }}>
+                    <span className="mini muted">Телефон</span>
+                    <b className="mini">{candidate.phone}</b>
+                  </div>
+                )}
                 <div className="flex" style={{ justifyContent: "space-between" }}>
                   <span className="mini muted">Ожидаемая ЗП</span>
                   <b className="mini">{fmtSum(candidate.expSalary)}</b>
