@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { TARIFFS } from "@/lib/tariffs";
 import { exportToCsv } from "@/lib/exportCsv";
+import Pagination from "@/components/Pagination";
 
 function fmtSum(n?: number | null) {
   if (!n) return "—";
@@ -27,8 +28,10 @@ const TABS = [
 ];
 
 export default function RequestsTable({ requests, role }: { requests: any[]; role: string }) {
+  const PAGE_SIZE = 20;
   const [tab, setTab] = useState("all");
   const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
 
   const list = useMemo(() => {
     let l =
@@ -39,6 +42,12 @@ export default function RequestsTable({ requests, role }: { requests: any[]; rol
     }
     return l;
   }, [requests, tab, query]);
+
+  const pageCount = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
+  const pageItems = useMemo(
+    () => list.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+    [list, page]
+  );
 
   const exportList = () => {
     exportToCsv(
@@ -66,7 +75,7 @@ export default function RequestsTable({ requests, role }: { requests: any[]; rol
           <button
             key={t.key}
             className={`btn btn-sm ${tab === t.key ? "btn-dark" : "btn-ghost"}`}
-            onClick={() => setTab(t.key)}
+            onClick={() => { setTab(t.key); setPage(1); }}
           >
             {t.label}
           </button>
@@ -76,7 +85,7 @@ export default function RequestsTable({ requests, role }: { requests: any[]; rol
           style={{ flex: 1, minWidth: 180, marginLeft: 8 }}
           placeholder="Поиск по названию…"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => { setQuery(e.target.value); setPage(1); }}
         />
         <button className="btn btn-ghost btn-sm" disabled={list.length === 0} onClick={exportList}>
           Экспорт в Excel
@@ -99,7 +108,7 @@ export default function RequestsTable({ requests, role }: { requests: any[]; rol
               </tr>
             </thead>
             <tbody>
-              {list.map((r) => {
+              {pageItems.map((r) => {
                 const st = STATUS_LABEL[r.status];
                 const tariff = TARIFFS[r.tariffCategory as keyof typeof TARIFFS];
                 return (
@@ -147,6 +156,8 @@ export default function RequestsTable({ requests, role }: { requests: any[]; rol
           </table>
         </div>
       )}
+
+      <Pagination page={page} pageCount={pageCount} total={list.length} pageSize={PAGE_SIZE} onChange={setPage} />
     </div>
   );
 }
