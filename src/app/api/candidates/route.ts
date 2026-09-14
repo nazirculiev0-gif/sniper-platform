@@ -11,6 +11,7 @@ const schema = z.object({
   source: z.string().optional(),
   gender: z.enum(["M", "F"]).optional(),
   age: z.number().int().min(14).max(100).optional(),
+  phone: z.string().max(30).optional(),
   desiredPositions: z.array(z.string()).default([]),
   industry: z.string().max(80).optional(),
   currentEmployer: z.string().max(120).optional(),
