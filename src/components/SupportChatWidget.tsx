@@ -77,7 +77,7 @@ export default function SupportChatWidget() {
         <div
           className="card"
           style={{
-            position: "absolute", bottom: 56, right: 0, width: 320, height: 420,
+            position: "absolute", bottom: 56, right: 0, width: 320, maxWidth: "calc(100vw - 40px)", height: 420,
             display: "flex", flexDirection: "column", boxShadow: "0 12px 32px rgba(0,0,0,.22)",
           }}
         >
