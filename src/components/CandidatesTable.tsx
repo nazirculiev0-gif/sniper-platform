@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Users, Target, Zap, Briefcase } from "lucide-react";
 import AddCandidateModal from "@/components/AddCandidateModal";
 import CandidateDetailModal from "@/components/CandidateDetailModal";
+import { exportToCsv } from "@/lib/exportCsv";
 
 const SEARCH_STATUS_LABEL: Record<string, { t: string; c: string }> = {
   active: { t: "Активно ищет", c: "pill-ok" },
@@ -41,6 +42,26 @@ export default function CandidatesTable({ candidates, interviewsCount }: { candi
     }
     return list;
   }, [candidates, query, status]);
+
+  const exportList = () => {
+    exportToCsv(
+      `база-кандидатов-${new Date().toISOString().slice(0, 10)}.csv`,
+      filtered.map((c) => ({
+        ФИО: c.name,
+        Пол: c.gender ? GENDER_LABEL[c.gender] : "",
+        Возраст: c.age ?? "",
+        Телефон: c.phone ?? "",
+        Профессия: c.profession ?? "",
+        "Желательные должности": (c.desiredPositions ?? []).join(", "),
+        Отрасль: c.industry ?? "",
+        "Статус поиска": c.searchStatus ? SEARCH_STATUS_LABEL[c.searchStatus].t : "",
+        "Текущее место": c.currentEmployer ?? "",
+        "Ожид. ЗП, сум": c.expSalary ?? "",
+        Навыки: (c.skills ?? []).join(", "),
+        Рекомендация: c.match ? `${c.match.score}% · ${c.match.title}` : "",
+      }))
+    );
+  };
 
   return (
     <div>
@@ -89,6 +110,9 @@ export default function CandidatesTable({ candidates, interviewsCount }: { candi
           <option value="passive">Пассивно</option>
           <option value="employed">Трудоустроен</option>
         </select>
+        <button className="btn btn-ghost btn-sm" disabled={filtered.length === 0} onClick={exportList}>
+          Экспорт в Excel
+        </button>
       </div>
 
       {candidates.length === 0 && (
