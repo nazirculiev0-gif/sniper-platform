@@ -32,6 +32,7 @@ model User {
   verificationExpires DateTime?
   resetToken   String?
   resetTokenExpires DateTime?
+  isBlocked    Boolean  @default(false)
   createdAt    DateTime @default(now())
 
   company           Company?
