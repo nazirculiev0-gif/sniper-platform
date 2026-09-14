@@ -30,6 +30,8 @@ model User {
   emailVerified Boolean @default(false)
   verificationCode String?
   verificationExpires DateTime?
+  resetToken   String?
+  resetTokenExpires DateTime?
   createdAt    DateTime @default(now())
 
   company           Company?
