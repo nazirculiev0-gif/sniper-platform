@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -23,19 +22,13 @@ export default function RegisterPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password, role, name }),
     });
+    setLoading(false);
     if (!res.ok) {
       const data = await res.json();
       setError(data.error?.formErrors?.[0] || data.error || "Ошибка регистрации");
-      setLoading(false);
       return;
     }
-    const signInRes = await signIn("credentials", { email, password, redirect: false });
-    setLoading(false);
-    if (signInRes?.error) {
-      router.push("/login");
-      return;
-    }
-    router.push("/dashboard");
+    router.push(`/verify-email?email=${encodeURIComponent(email)}`);
   };
 
   return (
