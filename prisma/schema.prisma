@@ -255,6 +255,11 @@ model Candidate {
   source        String?
   stage         KanbanStage  @default(NEW)
   note          String?
+  gender        String?      // M | F
+  age           Int?
+  desiredPositions String[]  @default([])
+  industry      String?
+  currentEmployer String?
   resumeFileName String?
   resumeFileType String?
   resumeFileData String?     @db.Text // base64, без префикса data:...;base64, — легаси-поле, новые файлы идут через files
