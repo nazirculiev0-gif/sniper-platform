@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Users, Target, Zap, Briefcase } from "lucide-react";
 import AddCandidateModal from "@/components/AddCandidateModal";
 import CandidateDetailModal from "@/components/CandidateDetailModal";
+import Pagination from "@/components/Pagination";
 import { exportToCsv } from "@/lib/exportCsv";
 
 const SEARCH_STATUS_LABEL: Record<string, { t: string; c: string }> = {
@@ -20,8 +21,10 @@ function fmtSum(n?: number | null) {
 }
 
 export default function CandidatesTable({ candidates, interviewsCount }: { candidates: any[]; interviewsCount: number }) {
+  const PAGE_SIZE = 20;
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("all");
+  const [page, setPage] = useState(1);
   const [addOpen, setAddOpen] = useState(false);
   const [selected, setSelected] = useState<any | null>(null);
 
@@ -42,6 +45,12 @@ export default function CandidatesTable({ candidates, interviewsCount }: { candi
     }
     return list;
   }, [candidates, query, status]);
+
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const pageItems = useMemo(
+    () => filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+    [filtered, page]
+  );
 
   const exportList = () => {
     exportToCsv(
@@ -102,9 +111,9 @@ export default function CandidatesTable({ candidates, interviewsCount }: { candi
           style={{ flex: 1, minWidth: 220 }}
           placeholder="Поиск по имени, профессии, навыку…"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => { setQuery(e.target.value); setPage(1); }}
         />
-        <select className="inp" style={{ width: 180 }} value={status} onChange={(e) => setStatus(e.target.value)}>
+        <select className="inp" style={{ width: 180 }} value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }}>
           <option value="all">Все статусы</option>
           <option value="active">Активно ищет</option>
           <option value="passive">Пассивно</option>
@@ -141,7 +150,7 @@ export default function CandidatesTable({ candidates, interviewsCount }: { candi
               </tr>
             </thead>
             <tbody>
-              {filtered.map((c) => {
+              {pageItems.map((c) => {
                 const st = c.searchStatus ? SEARCH_STATUS_LABEL[c.searchStatus] : null;
                 return (
                   <tr key={c.id} className="click" onClick={() => setSelected(c)}>
@@ -185,6 +194,8 @@ export default function CandidatesTable({ candidates, interviewsCount }: { candi
           </table>
         </div>
       )}
+
+      <Pagination page={page} pageCount={pageCount} total={filtered.length} pageSize={PAGE_SIZE} onChange={setPage} />
 
       {addOpen && <AddCandidateModal onClose={() => setAddOpen(false)} />}
       {selected && (
