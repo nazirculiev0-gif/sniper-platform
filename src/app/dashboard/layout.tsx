@@ -5,6 +5,7 @@ import SidebarNav from "@/components/SidebarNav";
 import SignOutButton from "@/components/SignOutButton";
 import MobileSidebarWrapper from "@/components/MobileSidebarWrapper";
 import NotificationBell from "@/components/NotificationBell";
+import SupportChatWidget from "@/components/SupportChatWidget";
 
 const ROLE_LABEL: Record<string, string> = {
   EMPLOYER: "Работодатель",
@@ -40,6 +41,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <div className="main">
         <div className="content"><div className="wrap">{children}</div></div>
       </div>
+      {(user.role === "EMPLOYER" || user.role === "RECRUITER") && <SupportChatWidget />}
     </div>
   );
 }
