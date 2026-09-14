@@ -19,6 +19,9 @@ export async function POST(req: Request) {
   if (parsed.data.amount > user.recruiterProfile.balance) {
     return NextResponse.json({ error: "Недостаточно средств на балансе" }, { status: 400 });
   }
+  if (!user.recruiterProfile.cardLast4) {
+    return NextResponse.json({ error: "Сначала привяжите карту для выплат в разделе «Финансы»" }, { status: 400 });
+  }
 
   const [withdrawal] = await prisma.$transaction([
     prisma.withdrawal.create({
@@ -38,4 +41,16 @@ export async function POST(req: Request) {
   );
 
   return NextResponse.json(withdrawal, { status: 201 });
+}
+
+export async function GET() {
+  const user = await getCurrentUser();
+  if (!user || user.role !== "RECRUITER" || !user.recruiterProfile) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  const withdrawals = await prisma.withdrawal.findMany({
+    where: { recruiterId: user.recruiterProfile.id },
+    orderBy: { requestedAt: "desc" },
+  });
+  return NextResponse.json(withdrawals);
 }
