@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Wallet, TrendingUp, Building2, Users, ShieldCheck, Briefcase, CheckCircle2, Percent, Clock, AlertTriangle } from "lucide-react";
+import { getCurrentUser } from "@/lib/currentUser";
 import { prisma } from "@/lib/prisma";
 
 function fmtSum(n?: number | null) {
@@ -38,6 +40,9 @@ function MiniBarChart({ data }: { data: { label: string; value: number }[] }) {
 }
 
 export default async function AdminStatsPage() {
+  const user = await getCurrentUser();
+  if (!user || user.role !== "ADMIN") redirect("/dashboard");
+
   const since14 = new Date();
   since14.setHours(0, 0, 0, 0);
   since14.setDate(since14.getDate() - 13);
