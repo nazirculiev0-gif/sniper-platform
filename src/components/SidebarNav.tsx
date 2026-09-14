@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   UserCheck,
   Landmark,
+  UserCog,
   type LucideIcon,
 } from "lucide-react";
 
@@ -36,6 +37,7 @@ const NAV: Record<string, { href: string; label: string; icon: LucideIcon }[]> =
     { href: "/dashboard/admin/stats", label: "Статистика", icon: BarChart3 },
     { href: "/dashboard/admin/requests", label: "Модерация", icon: ShieldCheck },
     { href: "/dashboard/admin/recruiters", label: "Рекрутеры", icon: UserCheck },
+    { href: "/dashboard/admin/users", label: "Пользователи", icon: UserCog },
     { href: "/dashboard/admin/finance", label: "Финансы", icon: Landmark },
   ],
 };
