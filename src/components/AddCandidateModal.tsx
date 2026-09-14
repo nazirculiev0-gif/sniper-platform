@@ -52,6 +52,9 @@ export default function AddCandidateModal({ requestId, onClose }: { requestId?: 
   const [fileData, setFileData] = useState("");
   const [fileError, setFileError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [checkingDup, setCheckingDup] = useState(false);
+  const [duplicates, setDuplicates] = useState<any[]>([]);
+  const [confirmDespiteDup, setConfirmDespiteDup] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
   const MAX_FILE_BYTES = 4 * 1024 * 1024; // 4 МБ
@@ -114,8 +117,7 @@ export default function AddCandidateModal({ requestId, onClose }: { requestId?: 
     reader.readAsDataURL(file);
   };
 
-  const createAndAdd = async () => {
-    if (!name.trim()) return;
+  const doCreate = async () => {
     setLoading(true);
     const url = requestId ? `/api/requests/${requestId}/candidates` : "/api/candidates";
     const res = await fetch(url, {
@@ -152,6 +154,27 @@ export default function AddCandidateModal({ requestId, onClose }: { requestId?: 
       const data = await res.json();
       alert(JSON.stringify(data.error));
     }
+  };
+
+  const createAndAdd = async () => {
+    if (!name.trim()) return;
+
+    if (!confirmDespiteDup) {
+      setCheckingDup(true);
+      const dupRes = await fetch(
+        `/api/candidates/check-duplicate?phone=${encodeURIComponent(phone)}&name=${encodeURIComponent(name)}`
+      );
+      setCheckingDup(false);
+      if (dupRes.ok) {
+        const found = await dupRes.json();
+        if (found.length > 0) {
+          setDuplicates(found);
+          return; // не создаём — ждём подтверждения
+        }
+      }
+    }
+
+    await doCreate();
   };
 
   return (
@@ -251,7 +274,7 @@ export default function AddCandidateModal({ requestId, onClose }: { requestId?: 
               <div className="flex gap8" style={{ marginBottom: 10 }}>
                 <label className="fld" style={{ marginBottom: 0, flex: 1 }}>
                   <span>ФИО <em>*</em></span>
-                  <input className="inp" value={name} onChange={(e) => setName(e.target.value)} />
+                  <input className="inp" value={name} onChange={(e) => { setName(e.target.value); setDuplicates([]); setConfirmDespiteDup(false); }} />
                 </label>
                 <label className="fld" style={{ marginBottom: 0, flex: 1 }}>
                   <span>Профессия</span>
@@ -274,7 +297,7 @@ export default function AddCandidateModal({ requestId, onClose }: { requestId?: 
                 </label>
                 <label className="fld" style={{ marginBottom: 0, flex: 1 }}>
                   <span>Телефон</span>
-                  <input className="inp" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+998 90 123 45 67" />
+                  <input className="inp" value={phone} onChange={(e) => { setPhone(e.target.value); setDuplicates([]); setConfirmDespiteDup(false); }} placeholder="+998 90 123 45 67" />
                 </label>
                 <label className="fld" style={{ marginBottom: 0, flex: 1 }}>
                   <span>Статус поиска</span>
@@ -350,12 +373,44 @@ export default function AddCandidateModal({ requestId, onClose }: { requestId?: 
               <div className="hint" style={{ marginBottom: 14 }}>
                 {requestId ? "Кандидат сохранится в вашу базу и добавится в канбан заявки." : "Кандидат сохранится в вашу личную базу — привязать к заявке можно будет позже."}
               </div>
+
+              {duplicates.length > 0 && (
+                <div className="card card-p" style={{ marginBottom: 14, borderLeft: "3px solid var(--warn)" }}>
+                  <b className="mini" style={{ display: "block", marginBottom: 8 }}>
+                    Похоже, такой кандидат уже есть в базе
+                  </b>
+                  <div style={{ display: "grid", gap: 6, marginBottom: 10 }}>
+                    {duplicates.map((d) => (
+                      <div key={d.id} className="mini muted">
+                        {d.name} {d.profession ? `· ${d.profession}` : ""} {d.phone ? `· ${d.phone}` : ""} · добавлен {new Date(d.createdAt).toLocaleDateString("ru-RU")}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap8">
+                    <button
+                      className="btn btn-red btn-sm"
+                      disabled={loading}
+                      onClick={() => { setConfirmDespiteDup(true); setDuplicates([]); doCreate(); }}
+                    >
+                      {loading ? "Добавляем…" : "Всё равно добавить"}
+                    </button>
+                    <button className="btn btn-ghost btn-sm" onClick={() => setDuplicates([])}>Отмена</button>
+                  </div>
+                </div>
+              )}
+
               <button
                 className="btn btn-red btn-block"
-                disabled={loading || !name.trim() || cvStatus === "parsing"}
+                disabled={loading || checkingDup || !name.trim() || cvStatus === "parsing"}
                 onClick={createAndAdd}
               >
-                {loading ? "Добавляем…" : cvStatus === "parsing" ? "Дождитесь обработки файла…" : "Создать и добавить"}
+                {loading
+                  ? "Добавляем…"
+                  : checkingDup
+                  ? "Проверяем на дубли…"
+                  : cvStatus === "parsing"
+                  ? "Дождитесь обработки файла…"
+                  : "Создать и добавить"}
               </button>
             </div>
           )}
