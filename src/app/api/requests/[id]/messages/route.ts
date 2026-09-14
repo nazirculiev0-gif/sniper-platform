@@ -17,6 +17,16 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   if (user.role === "RECRUITER") {
     if (!user.recruiterProfile) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     recruiterId = user.recruiterProfile.id;
+  } else if (user.role === "EMPLOYER") {
+    const request = await prisma.vacancyRequest.findUnique({
+      where: { id: params.id },
+      select: { companyId: true },
+    });
+    if (!request || request.companyId !== user.company?.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+  } else {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   if (!recruiterId) {
     return NextResponse.json({ error: "recruiterId обязателен" }, { status: 400 });
