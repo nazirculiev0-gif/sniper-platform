@@ -1,8 +1,13 @@
+import { redirect } from "next/navigation";
+import { getCurrentUser } from "@/lib/currentUser";
 import { prisma } from "@/lib/prisma";
 import FinanceView from "@/components/admin/FinanceView";
 import WithdrawalsAdminView from "@/components/admin/WithdrawalsAdminView";
 
 export default async function AdminFinancePage() {
+  const user = await getCurrentUser();
+  if (!user || user.role !== "ADMIN") redirect("/dashboard");
+
   const [payouts, withdrawals] = await Promise.all([
     prisma.payout.findMany({
       include: { request: { include: { company: true } }, recruiter: true },
