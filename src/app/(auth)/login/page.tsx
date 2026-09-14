@@ -22,17 +22,23 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [needsVerification, setNeedsVerification] = useState(false);
+  const [blocked, setBlocked] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setNeedsVerification(false);
+    setBlocked(false);
     setLoading(true);
     const res = await signIn("credentials", { email, password, redirect: false });
     setLoading(false);
     if (res?.error === "EMAIL_NOT_VERIFIED") {
       setNeedsVerification(true);
+      return;
+    }
+    if (res?.error === "ACCOUNT_BLOCKED") {
+      setBlocked(true);
       return;
     }
     if (res?.error) {
@@ -70,6 +76,11 @@ function LoginForm() {
         </div>
 
         {error && <div className="mini" style={{ color: "var(--red)", marginBottom: 10 }}>{error}</div>}
+        {blocked && (
+          <div className="mini" style={{ color: "var(--red)", marginBottom: 10 }}>
+            Аккаунт заблокирован администратором. Обратитесь в поддержку, если считаете это ошибкой.
+          </div>
+        )}
         {needsVerification && (
           <div className="mini" style={{ color: "var(--warn)", marginBottom: 10 }}>
             Email ещё не подтверждён.{" "}
