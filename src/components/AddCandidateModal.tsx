@@ -37,6 +37,11 @@ export default function AddCandidateModal({ requestId, onClose }: { requestId?: 
   const [stage, setStage] = useState("NEW");
   const [gender, setGender] = useState("");
   const [age, setAge] = useState("");
+  const [phone, setPhone] = useState("");
+  const [city, setCity] = useState("");
+  const [languages, setLanguages] = useState("");
+  const [tags, setTags] = useState("");
+  const [willingToRelocate, setWillingToRelocate] = useState(false);
   const [desiredPositions, setDesiredPositions] = useState("");
   const [industry, setIndustry] = useState("");
   const [currentEmployer, setCurrentEmployer] = useState("");
@@ -124,6 +129,11 @@ export default function AddCandidateModal({ requestId, onClose }: { requestId?: 
         source: fileName ? "Резюме (файл)" : "Вручную",
         gender: gender || undefined,
         age: age ? Number(age) : undefined,
+        phone: phone || undefined,
+        city: city || undefined,
+        languages: languages.split(",").map((s) => s.trim()).filter(Boolean),
+        tags: tags.split(",").map((s) => s.trim()).filter(Boolean),
+        willingToRelocate,
         desiredPositions: desiredPositions.split(",").map((s) => s.trim()).filter(Boolean),
         industry: industry || undefined,
         currentEmployer: currentEmployer || undefined,
@@ -263,6 +273,10 @@ export default function AddCandidateModal({ requestId, onClose }: { requestId?: 
                   <input className="inp" type="number" min={14} max={100} value={age} onChange={(e) => setAge(e.target.value)} />
                 </label>
                 <label className="fld" style={{ marginBottom: 0, flex: 1 }}>
+                  <span>Телефон</span>
+                  <input className="inp" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+998 90 123 45 67" />
+                </label>
+                <label className="fld" style={{ marginBottom: 0, flex: 1 }}>
                   <span>Статус поиска</span>
                   <select className="inp" value={searchStatus} onChange={(e) => setSearchStatus(e.target.value)}>
                     <option value="active">Активно ищет</option>
@@ -280,6 +294,10 @@ export default function AddCandidateModal({ requestId, onClose }: { requestId?: 
                 <label className="fld" style={{ marginBottom: 0, flex: 1 }}>
                   <span>Отрасль</span>
                   <input className="inp" value={industry} onChange={(e) => setIndustry(e.target.value)} placeholder="Финансы и бухгалтерия" />
+                </label>
+                <label className="fld" style={{ marginBottom: 0, flex: 1 }}>
+                  <span>Город</span>
+                  <input className="inp" value={city} onChange={(e) => setCity(e.target.value)} placeholder="Ташкент" />
                 </label>
               </div>
 
@@ -300,6 +318,22 @@ export default function AddCandidateModal({ requestId, onClose }: { requestId?: 
                   value={skills.join(", ")}
                   onChange={(e) => setSkills(e.target.value.split(",").map((s: string) => s.trim()).filter(Boolean))}
                 />
+              </label>
+
+              <div className="flex gap8" style={{ marginBottom: 10 }}>
+                <label className="fld" style={{ marginBottom: 0, flex: 1 }}>
+                  <span>Языки (через запятую)</span>
+                  <input className="inp" value={languages} onChange={(e) => setLanguages(e.target.value)} placeholder="Русский, Узбекский, Английский B2" />
+                </label>
+                <label className="fld" style={{ marginBottom: 0, flex: 1 }}>
+                  <span>Теги (через запятую)</span>
+                  <input className="inp" value={tags} onChange={(e) => setTags(e.target.value)} placeholder="Проверенный, МСФО" />
+                </label>
+              </div>
+
+              <label className="fld" style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <input type="checkbox" checked={willingToRelocate} onChange={(e) => setWillingToRelocate(e.target.checked)} />
+                <span>Готов(а) к релокации</span>
               </label>
 
               {requestId && (
