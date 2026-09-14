@@ -15,6 +15,7 @@ import {
   UserCheck,
   Landmark,
   UserCog,
+  MessageCircle,
   type LucideIcon,
 } from "lucide-react";
 
@@ -38,6 +39,7 @@ const NAV: Record<string, { href: string; label: string; icon: LucideIcon }[]> =
     { href: "/dashboard/admin/requests", label: "Модерация", icon: ShieldCheck },
     { href: "/dashboard/admin/recruiters", label: "Рекрутеры", icon: UserCheck },
     { href: "/dashboard/admin/users", label: "Пользователи", icon: UserCog },
+    { href: "/dashboard/admin/support", label: "Поддержка", icon: MessageCircle },
     { href: "/dashboard/admin/finance", label: "Финансы", icon: Landmark },
   ],
 };
