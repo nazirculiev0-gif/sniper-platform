@@ -28,6 +28,9 @@ export const authOptions: NextAuthOptions = {
         if (!user.emailVerified) {
           throw new Error("EMAIL_NOT_VERIFIED");
         }
+        if (user.isBlocked) {
+          throw new Error("ACCOUNT_BLOCKED");
+        }
 
         return {
           id: user.id,
