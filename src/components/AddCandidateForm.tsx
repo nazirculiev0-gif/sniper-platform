@@ -22,9 +22,11 @@ function fmtSum(n?: number | null) {
   return n.toLocaleString("ru-RU") + " сум";
 }
 
-export default function AddCandidateModal({ requestId, onClose }: { requestId: string; onClose: () => void }) {
+// requestId не передаётся — кандидат добавляется прямо в личную базу рекрутера,
+// без привязки к заявке. Тогда вкладка "Из моей базы" не показывается (не имеет смысла).
+export default function AddCandidateModal({ requestId, onClose }: { requestId?: string; onClose: () => void }) {
   const router = useRouter();
-  const [tab, setTab] = useState<"base" | "new">("base");
+  const [tab, setTab] = useState<"base" | "new">(requestId ? "base" : "new");
   const [base, setBase] = useState<any[]>([]);
   const [loadingBase, setLoadingBase] = useState(true);
 
@@ -33,6 +35,13 @@ export default function AddCandidateModal({ requestId, onClose }: { requestId: s
   const [expSalary, setExpSalary] = useState("");
   const [skills, setSkills] = useState<string[]>([]);
   const [stage, setStage] = useState("NEW");
+  const [gender, setGender] = useState("");
+  const [age, setAge] = useState("");
+  const [phone, setPhone] = useState("");
+  const [desiredPositions, setDesiredPositions] = useState("");
+  const [industry, setIndustry] = useState("");
+  const [currentEmployer, setCurrentEmployer] = useState("");
+  const [searchStatus, setSearchStatus] = useState("active");
   const [cvStatus, setCvStatus] = useState<"idle" | "parsing" | "done" | "error">("idle");
   const [fileName, setFileName] = useState("");
   const [fileType, setFileType] = useState("");
@@ -44,12 +53,14 @@ export default function AddCandidateModal({ requestId, onClose }: { requestId: s
   const MAX_FILE_BYTES = 4 * 1024 * 1024; // 4 МБ
 
   useEffect(() => {
+    if (!requestId) return;
     fetch("/api/candidates/base")
       .then((r) => (r.ok ? r.json() : []))
       .then((data) => { setBase(data); setLoadingBase(false); });
-  }, []);
+  }, [requestId]);
 
   const addFromBase = async (candidateId: string) => {
+    if (!requestId) return;
     setLoading(true);
     const res = await fetch(`/api/requests/${requestId}/candidates/from-base`, {
       method: "POST",
@@ -102,7 +113,8 @@ export default function AddCandidateModal({ requestId, onClose }: { requestId: s
   const createAndAdd = async () => {
     if (!name.trim()) return;
     setLoading(true);
-    const res = await fetch(`/api/requests/${requestId}/candidates`, {
+    const url = requestId ? `/api/requests/${requestId}/candidates` : "/api/candidates";
+    const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -111,7 +123,14 @@ export default function AddCandidateModal({ requestId, onClose }: { requestId: s
         skills,
         expSalary: expSalary ? Number(expSalary.replace(/\D/g, "")) : undefined,
         source: fileName ? "Резюме (файл)" : "Вручную",
-        stage,
+        gender: gender || undefined,
+        age: age ? Number(age) : undefined,
+        phone: phone || undefined,
+        desiredPositions: desiredPositions.split(",").map((s) => s.trim()).filter(Boolean),
+        industry: industry || undefined,
+        currentEmployer: currentEmployer || undefined,
+        searchStatus,
+        ...(requestId ? { stage } : {}),
         resumeFileName: fileName || undefined,
         resumeFileType: fileType || undefined,
         resumeFileData: fileData || undefined,
@@ -134,27 +153,29 @@ export default function AddCandidateModal({ requestId, onClose }: { requestId: s
     >
       <div className="card" style={{ width: "min(640px, 100%)", maxHeight: "85vh", overflowY: "auto" }} onClick={(e) => e.stopPropagation()}>
         <div className="card-h">
-          <h3 style={{ fontSize: 15 }}>Добавить кандидата в заявку</h3>
+          <h3 style={{ fontSize: 15 }}>{requestId ? "Добавить кандидата в заявку" : "Добавить кандидата в базу"}</h3>
           <button className="btn btn-ghost btn-sm" style={{ marginLeft: "auto" }} onClick={onClose}>×</button>
         </div>
 
-        <div className="flex gap8" style={{ padding: "12px 18px 0", borderBottom: "1px solid var(--line)" }}>
-          <button
-            onClick={() => setTab("base")}
-            style={{ background: "none", border: "none", borderBottom: tab === "base" ? "2px solid var(--red)" : "2px solid transparent", color: tab === "base" ? "var(--red)" : "var(--mid)", fontWeight: 600, fontSize: 13, padding: "8px 4px", marginRight: 16, cursor: "pointer" }}
-          >
-            Из моей базы
-          </button>
-          <button
-            onClick={() => setTab("new")}
-            style={{ background: "none", border: "none", borderBottom: tab === "new" ? "2px solid var(--red)" : "2px solid transparent", color: tab === "new" ? "var(--red)" : "var(--mid)", fontWeight: 600, fontSize: 13, padding: "8px 4px", marginRight: 16, cursor: "pointer" }}
-          >
-            + Новый кандидат
-          </button>
-        </div>
+        {requestId && (
+          <div className="flex gap8" style={{ padding: "12px 18px 0", borderBottom: "1px solid var(--line)" }}>
+            <button
+              onClick={() => setTab("base")}
+              style={{ background: "none", border: "none", borderBottom: tab === "base" ? "2px solid var(--red)" : "2px solid transparent", color: tab === "base" ? "var(--red)" : "var(--mid)", fontWeight: 600, fontSize: 13, padding: "8px 4px", marginRight: 16, cursor: "pointer" }}
+            >
+              Из моей базы
+            </button>
+            <button
+              onClick={() => setTab("new")}
+              style={{ background: "none", border: "none", borderBottom: tab === "new" ? "2px solid var(--red)" : "2px solid transparent", color: tab === "new" ? "var(--red)" : "var(--mid)", fontWeight: 600, fontSize: 13, padding: "8px 4px", marginRight: 16, cursor: "pointer" }}
+            >
+              + Новый кандидат
+            </button>
+          </div>
+        )}
 
         <div style={{ padding: 18 }}>
-          {tab === "base" && (
+          {tab === "base" && requestId && (
             <div>
               {loadingBase && <div className="mini muted">Загрузка…</div>}
               {!loadingBase && base.length === 0 && (
@@ -229,20 +250,55 @@ export default function AddCandidateModal({ requestId, onClose }: { requestId: s
                   <input className="inp" value={profession} onChange={(e) => setProfession(e.target.value)} />
                 </label>
               </div>
+
+              <div className="flex gap8" style={{ marginBottom: 10 }}>
+                <label className="fld" style={{ marginBottom: 0, flex: 1 }}>
+                  <span>Пол</span>
+                  <select className="inp" value={gender} onChange={(e) => setGender(e.target.value)}>
+                    <option value="">Не указан</option>
+                    <option value="M">Мужской</option>
+                    <option value="F">Женский</option>
+                  </select>
+                </label>
+                <label className="fld" style={{ marginBottom: 0, flex: 1 }}>
+                  <span>Возраст</span>
+                  <input className="inp" type="number" min={14} max={100} value={age} onChange={(e) => setAge(e.target.value)} />
+                </label>
+                <label className="fld" style={{ marginBottom: 0, flex: 1 }}>
+                  <span>Телефон</span>
+                  <input className="inp" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+998 90 123 45 67" />
+                </label>
+                <label className="fld" style={{ marginBottom: 0, flex: 1 }}>
+                  <span>Статус поиска</span>
+                  <select className="inp" value={searchStatus} onChange={(e) => setSearchStatus(e.target.value)}>
+                    <option value="active">Активно ищет</option>
+                    <option value="passive">Пассивно смотрит</option>
+                    <option value="employed">Трудоустроен</option>
+                  </select>
+                </label>
+              </div>
+
               <div className="flex gap8" style={{ marginBottom: 10 }}>
                 <label className="fld" style={{ marginBottom: 0, flex: 1 }}>
                   <span>Ожидания, сум</span>
                   <input className="inp" value={expSalary} onChange={(e) => setExpSalary(e.target.value)} />
                 </label>
                 <label className="fld" style={{ marginBottom: 0, flex: 1 }}>
-                  <span>Этап</span>
-                  <select className="inp" value={stage} onChange={(e) => setStage(e.target.value)}>
-                    <option value="NEW">Поиск</option>
-                    <option value="SCREENING">Скрининг</option>
-                    <option value="INTERVIEW">Интервью</option>
-                  </select>
+                  <span>Отрасль</span>
+                  <input className="inp" value={industry} onChange={(e) => setIndustry(e.target.value)} placeholder="Финансы и бухгалтерия" />
                 </label>
               </div>
+
+              <label className="fld">
+                <span>Текущее место работы</span>
+                <input className="inp" value={currentEmployer} onChange={(e) => setCurrentEmployer(e.target.value)} placeholder="ООО «Компания» — необязательно" />
+              </label>
+
+              <label className="fld">
+                <span>Желательные должности (через запятую)</span>
+                <input className="inp" value={desiredPositions} onChange={(e) => setDesiredPositions(e.target.value)} placeholder="Главбух, Финансовый директор" />
+              </label>
+
               <label className="fld">
                 <span>Навыки (через запятую)</span>
                 <input
@@ -251,9 +307,27 @@ export default function AddCandidateModal({ requestId, onClose }: { requestId: s
                   onChange={(e) => setSkills(e.target.value.split(",").map((s: string) => s.trim()).filter(Boolean))}
                 />
               </label>
-              <div className="hint" style={{ marginBottom: 14 }}>Кандидат сохранится в вашу базу и добавится в канбан заявки.</div>
-              <button className="btn btn-red btn-block" disabled={loading || !name.trim()} onClick={createAndAdd}>
-                {loading ? "Добавляем…" : "Создать и добавить"}
+
+              {requestId && (
+                <label className="fld">
+                  <span>Этап</span>
+                  <select className="inp" value={stage} onChange={(e) => setStage(e.target.value)}>
+                    <option value="NEW">Поиск</option>
+                    <option value="SCREENING">Скрининг</option>
+                    <option value="INTERVIEW">Интервью</option>
+                  </select>
+                </label>
+              )}
+
+              <div className="hint" style={{ marginBottom: 14 }}>
+                {requestId ? "Кандидат сохранится в вашу базу и добавится в канбан заявки." : "Кандидат сохранится в вашу личную базу — привязать к заявке можно будет позже."}
+              </div>
+              <button
+                className="btn btn-red btn-block"
+                disabled={loading || !name.trim() || cvStatus === "parsing"}
+                onClick={createAndAdd}
+              >
+                {loading ? "Добавляем…" : cvStatus === "parsing" ? "Дождитесь обработки файла…" : "Создать и добавить"}
               </button>
             </div>
           )}
