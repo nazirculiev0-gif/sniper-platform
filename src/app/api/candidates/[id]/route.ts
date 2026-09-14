@@ -37,9 +37,25 @@ const schema = z.object({
     "REJECTED",
   ]).optional(),
   note: z.string().max(2000).optional(),
+  name: z.string().min(2).optional(),
+  profession: z.string().optional(),
+  skills: z.array(z.string()).optional(),
+  expSalary: z.number().int().optional(),
+  gender: z.enum(["M", "F"]).optional(),
+  age: z.number().int().min(14).max(100).optional(),
+  phone: z.string().max(30).optional(),
+  city: z.string().max(80).optional(),
+  languages: z.array(z.string()).optional(),
+  tags: z.array(z.string()).optional(),
+  willingToRelocate: z.boolean().optional(),
+  desiredPositions: z.array(z.string()).optional(),
+  industry: z.string().max(80).optional(),
+  currentEmployer: z.string().max(120).optional(),
+  searchStatus: z.enum(["active", "passive", "employed"]).optional(),
 });
 
-// PATCH /api/candidates/:id — сменить этап канбана и/или сохранить заметку
+// PATCH /api/candidates/:id — рекрутер-владелец редактирует профиль кандидата
+// целиком (любое подмножество полей), меняет этап канбана и/или заметку.
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   const user = await getCurrentUser();
   if (!user || user.role !== "RECRUITER" || !user.recruiterProfile) {
@@ -58,16 +74,13 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
-  if (parsed.data.stage === undefined && parsed.data.note === undefined) {
+  if (Object.keys(parsed.data).length === 0) {
     return NextResponse.json({ error: "Nothing to update" }, { status: 400 });
   }
 
   const updated = await prisma.candidate.update({
     where: { id: params.id },
-    data: {
-      ...(parsed.data.stage !== undefined ? { stage: parsed.data.stage } : {}),
-      ...(parsed.data.note !== undefined ? { note: parsed.data.note } : {}),
-    },
+    data: parsed.data,
   });
 
   if (parsed.data.stage === "INTERVIEW" && candidate.stage !== "INTERVIEW" && candidate.request) {
