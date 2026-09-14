@@ -1,7 +1,12 @@
+import { redirect } from "next/navigation";
+import { getCurrentUser } from "@/lib/currentUser";
 import { prisma } from "@/lib/prisma";
 import ModerationList from "@/components/admin/ModerationList";
 
 export default async function AdminRequestsPage() {
+  const user = await getCurrentUser();
+  if (!user || user.role !== "ADMIN") redirect("/dashboard");
+
   const requests = await prisma.vacancyRequest.findMany({
     include: { company: true },
     orderBy: { createdAt: "desc" },
