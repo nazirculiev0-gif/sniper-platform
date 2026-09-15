@@ -58,13 +58,13 @@ export default function RequestSidePanel({
   return (
     <div style={{ display: "grid", gap: 14 }}>
       <div className="card card-p">
-        <div className="mini muted" style={{ marginBottom: 6, textTransform: "uppercase", fontSize: 10.5, letterSpacing: ".04em" }}>Вознаграждение</div>
+        <div className="mini muted" style={{ marginBottom: 6, fontSize: 11.5, fontWeight: 600 }}>Вознаграждение</div>
         <div className="mini muted">за подбор</div>
         <b className="sg" style={{ fontSize: 20 }}>{fmtSum(rewardGross)}</b>
       </div>
 
       <div className="card card-p">
-        <div className="mini muted" style={{ marginBottom: 10, textTransform: "uppercase", fontSize: 10.5, letterSpacing: ".04em" }}>Сроки</div>
+        <div className="mini muted" style={{ marginBottom: 10, fontSize: 11.5, fontWeight: 600 }}>Сроки</div>
         <div className="flex" style={{ justifyContent: "space-between", marginBottom: 6 }}>
           <span className="mini muted">Дедлайн активности</span>
           <b className="mini">{exclusiveDays} дней</b>
@@ -83,7 +83,7 @@ export default function RequestSidePanel({
 
       {participants.length > 0 && (
         <div className="card card-p">
-          <div className="mini muted" style={{ marginBottom: 10, textTransform: "uppercase", fontSize: 10.5, letterSpacing: ".04em" }}>Рекрутеры на заявке</div>
+          <div className="mini muted" style={{ marginBottom: 10, fontSize: 11.5, fontWeight: 600 }}>Рекрутеры на заявке</div>
           {participants.length > 1 && (
             <div className="hint" style={{ marginBottom: 10 }}>
               Несколько рекрутеров работают параллельно. Смотрите на их кандидатов, рейтинг и профиль — найм подтверждается за тем рекрутером, чьего кандидата вы наняли.
@@ -105,7 +105,7 @@ export default function RequestSidePanel({
 
       {status === "IN_PROGRESS" && leftDays !== null && (
         <div className="card card-p">
-          <div className="mini muted" style={{ marginBottom: 6, textTransform: "uppercase", fontSize: 10.5, letterSpacing: ".04em" }}>
+          <div className="mini muted" style={{ marginBottom: 6, fontSize: 11.5, fontWeight: 600 }}>
             Активность · {exclusiveDays} дн.
           </div>
           <b className="sg" style={{ fontSize: 15 }}>{leftDays <= 0 ? "Дедлайн сегодня" : `${leftDays} дн. осталось`}</b>
