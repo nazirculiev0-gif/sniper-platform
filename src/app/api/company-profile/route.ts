@@ -34,3 +34,18 @@ export async function PATCH(req: Request) {
 
   return NextResponse.json(updated);
 }
+
+// DELETE /api/company-profile — открепить логотип компании
+export async function DELETE() {
+  const user = await getCurrentUser();
+  if (!user || user.role !== "EMPLOYER" || !user.company) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  await prisma.company.update({
+    where: { id: user.company.id },
+    data: { logoData: null, logoType: null },
+  });
+
+  return NextResponse.json({ ok: true });
+}
