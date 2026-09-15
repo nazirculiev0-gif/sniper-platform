@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+
+const MAX_LOGO_BYTES = 1024 * 1024; // 1 МБ
 
 export default function CompanyProfileEditForm({ company }: { company: any }) {
   const router = useRouter();
@@ -10,6 +12,36 @@ export default function CompanyProfileEditForm({ company }: { company: any }) {
   const [industry, setIndustry] = useState(company.industry ?? "");
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [logoError, setLogoError] = useState("");
+  const [logoPreview, setLogoPreview] = useState<string | null>(
+    company.logoData ? `data:${company.logoType || "image/png"};base64,${company.logoData}` : null
+  );
+  const [logoData, setLogoData] = useState<string | null>(null);
+  const [logoType, setLogoType] = useState<string | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+
+  const pickLogo = (file?: File) => {
+    if (!file) return;
+    setLogoError("");
+    if (!file.type.startsWith("image/")) {
+      setLogoError("Нужен файл изображения (PNG, JPG, SVG)");
+      return;
+    }
+    if (file.size > MAX_LOGO_BYTES) {
+      setLogoError("Файл слишком большой — максимум 1 МБ");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      const base64 = result.split(",")[1] ?? "";
+      setLogoData(base64);
+      setLogoType(file.type);
+      setLogoPreview(result);
+    };
+    reader.onerror = () => setLogoError("Не удалось прочитать файл");
+    reader.readAsDataURL(file);
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,7 +50,11 @@ export default function CompanyProfileEditForm({ company }: { company: any }) {
     const res = await fetch("/api/company-profile", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, industry: industry || undefined }),
+      body: JSON.stringify({
+        name,
+        industry: industry || undefined,
+        ...(logoData ? { logoData, logoType } : {}),
+      }),
     });
     setLoading(false);
     if (res.ok) {
@@ -29,6 +65,38 @@ export default function CompanyProfileEditForm({ company }: { company: any }) {
 
   return (
     <form onSubmit={submit} className="card card-p" style={{ maxWidth: 560 }}>
+      <label className="fld">
+        <span>Логотип компании</span>
+        <input
+          ref={fileInput}
+          type="file"
+          accept="image/*"
+          style={{ display: "none" }}
+          onChange={(e) => pickLogo(e.target.files?.[0])}
+        />
+        <div className="flex gap8" style={{ alignItems: "center" }}>
+          {logoPreview ? (
+            <img
+              src={logoPreview}
+              alt="Логотип"
+              style={{ width: 56, height: 56, borderRadius: 12, objectFit: "cover", border: "1px solid var(--line)" }}
+            />
+          ) : (
+            <div
+              className="av"
+              style={{ width: 56, height: 56, fontSize: 20, background: "var(--dark)", borderRadius: 12 }}
+            >
+              {(name || "?").slice(0, 1).toUpperCase()}
+            </div>
+          )}
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => fileInput.current?.click()}>
+            {logoPreview ? "Заменить" : "Загрузить логотип"}
+          </button>
+        </div>
+        {logoError && <span className="hint" style={{ color: "var(--red)" }}>{logoError}</span>}
+        <span className="hint">PNG, JPG или SVG, до 1 МБ. Отображается на публичной странице компании.</span>
+      </label>
+
       <label className="fld">
         <span>Название компании <em>*</em></span>
         <input className="inp" required value={name} onChange={(e) => setName(e.target.value)} />
