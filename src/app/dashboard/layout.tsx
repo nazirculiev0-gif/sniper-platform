@@ -26,7 +26,15 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <b style={{ color: "#fff" }}>SNIP<span style={{ color: "var(--red)" }}>E</span>R</b>
         </Link>
         <div className="side-role">
-          <div className="ic">{displayName.slice(0, 1).toUpperCase()}</div>
+          {user.role === "EMPLOYER" && user.company?.logoData ? (
+            <img
+              src={`data:${user.company.logoType || "image/png"};base64,${user.company.logoData}`}
+              alt={displayName}
+              style={{ width: 30, height: 30, borderRadius: 8, objectFit: "cover", flexShrink: 0 }}
+            />
+          ) : (
+            <div className="ic">{displayName.slice(0, 1).toUpperCase()}</div>
+          )}
           <div className="t">
             {ROLE_LABEL[user.role]}
             <b>{displayName}</b>
