@@ -93,7 +93,7 @@ export default function CompanyProfileEditForm({ company }: { company: any }) {
             <img
               src={logoPreview}
               alt="Логотип"
-              style={{ width: 56, height: 56, borderRadius: 12, objectFit: "cover", border: "1px solid var(--line)" }}
+              style={{ width: 56, height: 56, borderRadius: 12, objectFit: "contain", border: "1px solid var(--line)", background: "#fff", padding: 4 }}
             />
           ) : (
             <div
