@@ -23,14 +23,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <div className="shell">
       <MobileSidebarWrapper>
         <Link href="/dashboard" className="side-logo">
-          <b style={{ color: "#fff" }}>SNIP<span style={{ color: "var(--red)" }}>E</span>R</b>
+          <b style={{ color: "#fff", flexShrink: 0 }}>SNIP<span style={{ color: "var(--red)" }}>E</span>R</b>
           {user.role === "EMPLOYER" && user.company?.logoData && (
             <>
-              <span style={{ color: "rgba(255,255,255,.35)", fontSize: 15 }}>×</span>
+              <span style={{ color: "rgba(255,255,255,.35)", fontSize: 15, flexShrink: 0 }}>×</span>
               <img
                 src={`data:${user.company.logoType || "image/png"};base64,${user.company.logoData}`}
                 alt={user.company.name}
-                style={{ width: 26, height: 26, borderRadius: 7, objectFit: "cover", background: "#fff" }}
+                style={{ height: 26, width: "auto", maxWidth: 90, borderRadius: 4, objectFit: "contain", background: "#fff", padding: 2, flexShrink: 0 }}
               />
             </>
           )}
