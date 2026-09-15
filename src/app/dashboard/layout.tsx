@@ -24,17 +24,19 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <MobileSidebarWrapper>
         <Link href="/dashboard" className="side-logo">
           <b style={{ color: "#fff" }}>SNIP<span style={{ color: "var(--red)" }}>E</span>R</b>
+          {user.role === "EMPLOYER" && user.company?.logoData && (
+            <>
+              <span style={{ color: "rgba(255,255,255,.35)", fontSize: 15 }}>×</span>
+              <img
+                src={`data:${user.company.logoType || "image/png"};base64,${user.company.logoData}`}
+                alt={user.company.name}
+                style={{ width: 26, height: 26, borderRadius: 7, objectFit: "cover", background: "#fff" }}
+              />
+            </>
+          )}
         </Link>
         <div className="side-role">
-          {user.role === "EMPLOYER" && user.company?.logoData ? (
-            <img
-              src={`data:${user.company.logoType || "image/png"};base64,${user.company.logoData}`}
-              alt={displayName}
-              style={{ width: 30, height: 30, borderRadius: 8, objectFit: "cover", flexShrink: 0 }}
-            />
-          ) : (
-            <div className="ic">{displayName.slice(0, 1).toUpperCase()}</div>
-          )}
+          <div className="ic">{displayName.slice(0, 1).toUpperCase()}</div>
           <div className="t">
             {ROLE_LABEL[user.role]}
             <b>{displayName}</b>
