@@ -82,6 +82,8 @@ model Company {
   name      String
   industry  String?
   verified  Boolean  @default(false)
+  logoData  String?  @db.Text // base64, без префикса data:...;base64,
+  logoType  String?
   createdAt DateTime @default(now())
 
   userId    String   @unique
