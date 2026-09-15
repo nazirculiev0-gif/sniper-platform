@@ -44,7 +44,7 @@ export default async function RecruiterPublicProfile({ params }: { params: { id:
           <div style={{ flex: 1 }}>
             <div className="flex gap8" style={{ alignItems: "center" }}>
               <b className="sg" style={{ fontSize: 18 }}>{recruiter.name}</b>
-              {recruiter.verified && <span className="pill pill-ok">Верифицирован</span>}
+              {recruiter.verified && <span className="pill pill-gold">Верифицирован</span>}
               <span className="pill pill-mut">{recruiter.type === "AGENCY" ? "Агентство" : "Соло-рекрутер"}</span>
             </div>
             <div className="flex gap8" style={{ marginTop: 4, alignItems: "center" }}>
