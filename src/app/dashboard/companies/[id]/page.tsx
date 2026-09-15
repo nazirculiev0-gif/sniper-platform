@@ -44,11 +44,27 @@ export default async function CompanyPublicProfile({ params }: { params: { id: s
 
   return (
     <div>
+      <div className="flex gap8" style={{ alignItems: "center", marginBottom: 14 }}>
+        <span className="sg" style={{ fontSize: 13, fontWeight: 700, color: "var(--mid)" }}>
+          SNIPER<span style={{ color: "var(--red)" }}>.</span>
+        </span>
+        <span className="mini muted" style={{ fontSize: 13 }}>×</span>
+        <span className="sg" style={{ fontSize: 13, fontWeight: 700 }}>{company.name}</span>
+      </div>
+
       <div className="card card-p" style={{ marginBottom: 18 }}>
         <div className="flex gap8" style={{ alignItems: "center" }}>
-          <div className="av" style={{ width: 56, height: 56, fontSize: 20, background: "var(--dark)" }}>
-            {company.name.slice(0, 1).toUpperCase()}
-          </div>
+          {company.logoData ? (
+            <img
+              src={`data:${company.logoType || "image/png"};base64,${company.logoData}`}
+              alt={company.name}
+              style={{ width: 56, height: 56, borderRadius: 14, objectFit: "cover", border: "1px solid var(--line)" }}
+            />
+          ) : (
+            <div className="av" style={{ width: 56, height: 56, fontSize: 20, background: "var(--dark)" }}>
+              {company.name.slice(0, 1).toUpperCase()}
+            </div>
+          )}
           <div style={{ flex: 1 }}>
             <div className="flex gap8" style={{ alignItems: "center" }}>
               <b className="sg" style={{ fontSize: 18 }}>{company.name}</b>
