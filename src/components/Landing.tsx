@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Wallet, Clock3, ShieldCheck, LayoutGrid } from "lucide-react";
 import { TARIFFS, fmtSuggestedRange } from "@/lib/tariffs";
 
 const EMPLOYER_STEPS = [
@@ -11,6 +12,13 @@ const RECRUITER_STEPS = [
   { t: "Выбирайте заявки", d: "Открытая биржа вакансий с фильтрами по грейду, отрасли и вознаграждению." },
   { t: "Ведите кандидатов", d: "Личная база, канбан-доска, чат с работодателем — всё в одном месте." },
   { t: "Получайте выплаты", d: "После подтверждённого найма вознаграждение поступает на ваш баланс." },
+];
+
+const VALUE_PROPS = [
+  { icon: Wallet, t: "Без предоплаты", d: "Платите только за закрытую вакансию" },
+  { icon: Clock3, t: "14 дней на активность", d: "Нет отклика — заявка автоматически возвращается на биржу" },
+  { icon: ShieldCheck, t: "Рекрутеры верифицированы", d: "Каждый проходит проверку администратора платформы" },
+  { icon: LayoutGrid, t: "Всё в одном месте", d: "Канбан кандидатов, чат и видеозвонки на платформе" },
 ];
 
 const FAQ = [
@@ -36,6 +44,47 @@ const FAQ = [
   },
 ];
 
+function HeroPreview() {
+  return (
+    <div className="card card-p" style={{ maxWidth: 380, marginLeft: "auto" }}>
+      <div className="flex gap8" style={{ alignItems: "flex-start", marginBottom: 14 }}>
+        <div>
+          <b className="sg" style={{ fontSize: 15, display: "block" }}>Backend Developer</b>
+          <span className="mini muted">ТехноКом · Ташкент</span>
+        </div>
+        <span className="pill pill-info" style={{ marginLeft: "auto" }}>В работе</span>
+      </div>
+      <div className="flex gap8 wrapf" style={{ marginBottom: 14 }}>
+        <span className="tag">Новые · 3</span>
+        <span className="tag">Интервью · 2</span>
+        <span className="tag">Оффер · 1</span>
+      </div>
+      <div style={{ borderTop: "1px solid var(--line2)", paddingTop: 12, display: "grid", gap: 10 }}>
+        <div className="flex gap8" style={{ alignItems: "center" }}>
+          <span className="av" style={{ width: 30, height: 30, fontSize: 12, background: "var(--red)" }}>АР</span>
+          <div style={{ flex: 1 }}>
+            <b className="mini" style={{ display: "block" }}>Азиза Рахимова</b>
+            <span className="mini muted">от Алмаз Рустамов</span>
+          </div>
+          <span className="pill" style={{ background: "var(--okbg)", color: "var(--ok)" }}>96% · Backend</span>
+        </div>
+        <div className="flex gap8" style={{ alignItems: "center" }}>
+          <span className="av" style={{ width: 30, height: 30, fontSize: 12, background: "var(--info)" }}>ДС</span>
+          <div style={{ flex: 1 }}>
+            <b className="mini" style={{ display: "block" }}>Дмитрий Сон</b>
+            <span className="mini muted">от Гульнара Ким</span>
+          </div>
+          <span className="pill" style={{ background: "var(--warnbg)", color: "var(--warn)" }}>78% · Backend</span>
+        </div>
+      </div>
+      <div className="flex" style={{ justifyContent: "space-between", marginTop: 14, paddingTop: 12, borderTop: "1px solid var(--line2)" }}>
+        <span className="mini muted">Вознаграждение</span>
+        <b className="sg" style={{ fontSize: 15 }}>4 200 000 сум</b>
+      </div>
+    </div>
+  );
+}
+
 export default function Landing() {
   return (
     <div style={{ background: "var(--warm)", minHeight: "100vh" }}>
@@ -58,41 +107,39 @@ export default function Landing() {
       </div>
 
       {/* Hero */}
-      <div className="wrap" style={{ padding: "72px 26px 48px", textAlign: "center" }}>
-        <span className="pill pill-red" style={{ marginBottom: 16 }}>Биржа рекрутинга в Узбекистане</span>
-        <h1 className="sg landing-hero-title" style={{ fontSize: 42, fontWeight: 700, lineHeight: 1.15, margin: "16px 0", letterSpacing: "-0.01em" }}>
-          Нанимайте через проверенных<br />рекрутеров — платите за результат
-        </h1>
-        <p className="mini" style={{ fontSize: 15, color: "var(--mid)", maxWidth: 600, margin: "0 auto 28px", lineHeight: 1.6 }}>
-          SNIPER соединяет компании с независимыми рекрутерами и агентствами на одной платформе.
-          Публикуйте вакансию, получайте кандидатов от нескольких рекрутеров сразу и платите
-          только тогда, когда человек выходит на работу.
-        </p>
-        <div className="flex gap8" style={{ justifyContent: "center" }}>
-          <Link href="/register" className="btn btn-red btn-lg">Разместить вакансию</Link>
-          <Link href="/register" className="btn btn-ghost btn-lg">Я рекрутер</Link>
+      <div className="wrap landing-hero-grid" style={{ padding: "72px 26px 56px" }}>
+        <div>
+          <h1 className="sg landing-hero-title" style={{ fontSize: 42, fontWeight: 700, lineHeight: 1.15, margin: "0 0 16px", letterSpacing: "-0.01em" }}>
+            Нанимайте через проверенных рекрутеров — платите за результат
+          </h1>
+          <p className="mini" style={{ fontSize: 15, color: "var(--mid)", maxWidth: 480, margin: "0 0 28px", lineHeight: 1.6 }}>
+            SNIPER соединяет компании с независимыми рекрутерами и агентствами Узбекистана.
+            Публикуйте вакансию, получайте кандидатов от нескольких рекрутеров сразу и платите
+            только тогда, когда человек выходит на работу.
+          </p>
+          <div className="flex gap8">
+            <Link href="/register" className="btn btn-red btn-lg">Разместить вакансию</Link>
+            <Link href="/register" className="btn btn-ghost btn-lg">Я рекрутер</Link>
+          </div>
         </div>
+        <HeroPreview />
       </div>
 
-      {/* Value props strip */}
+      {/* Value props */}
       <div className="wrap" style={{ padding: "0 26px 56px" }}>
-        <div className="grid-kpi">
-          <div className="kpi">
-            <div className="n" style={{ fontSize: 20 }}>Без предоплаты</div>
-            <div className="l">Платите только за закрытую вакансию</div>
-          </div>
-          <div className="kpi">
-            <div className="n" style={{ fontSize: 20 }}>14 дней</div>
-            <div className="l">Без активности по заявке — автовозврат на биржу</div>
-          </div>
-          <div className="kpi">
-            <div className="n" style={{ fontSize: 20 }}>Верифицированные</div>
-            <div className="l">Все рекрутеры проходят проверку администратора</div>
-          </div>
-          <div className="kpi">
-            <div className="n" style={{ fontSize: 20 }}>Всё в одном месте</div>
-            <div className="l">Канбан кандидатов, чат и видеозвонки на платформе</div>
-          </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 20 }}>
+          {VALUE_PROPS.map((v, i) => {
+            const Icon = v.icon;
+            return (
+              <div key={i}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: "var(--redbg)", color: "var(--red)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 10 }}>
+                  <Icon size={18} />
+                </div>
+                <b className="mini" style={{ display: "block", marginBottom: 3 }}>{v.t}</b>
+                <span className="mini muted">{v.d}</span>
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -153,11 +200,11 @@ export default function Landing() {
       {/* FAQ */}
       <div id="faq" className="wrap" style={{ padding: "0 26px 56px" }}>
         <h2 className="sg" style={{ fontSize: 24, marginBottom: 24, textAlign: "center" }}>Частые вопросы</h2>
-        <div style={{ display: "grid", gap: 10, maxWidth: 720, margin: "0 auto" }}>
+        <div className="card" style={{ maxWidth: 720, margin: "0 auto" }}>
           {FAQ.map((f, i) => (
-            <div key={i} className="card card-p">
+            <div key={i} style={{ padding: "16px 20px", borderBottom: i < FAQ.length - 1 ? "1px solid var(--line2)" : "none" }}>
               <b className="mini" style={{ display: "block", marginBottom: 6 }}>{f.q}</b>
-              <p className="mini muted" style={{ lineHeight: 1.6 }}>{f.a}</p>
+              <p className="mini muted" style={{ lineHeight: 1.6, margin: 0 }}>{f.a}</p>
             </div>
           ))}
         </div>
