@@ -10,6 +10,7 @@ export default function RequestTabs({
   candidatesCount,
   chat,
   showChat,
+  sidePanel,
 }: {
   overview: ReactNode;
   questions: ReactNode;
@@ -18,6 +19,7 @@ export default function RequestTabs({
   candidatesCount: number;
   chat: ReactNode;
   showChat: boolean;
+  sidePanel: ReactNode;
 }) {
   const [tab, setTab] = useState<"overview" | "questions" | "candidates" | "chat">("overview");
 
@@ -27,6 +29,10 @@ export default function RequestTabs({
     { key: "candidates", label: `Кандидаты ${candidatesCount}` },
     ...(showChat ? [{ key: "chat" as const, label: "Чат" }] : []),
   ];
+
+  // На вкладке "Кандидаты" боковая панель (вознаграждение/сроки/рекрутеры/активность)
+  // только мешает канбану — скрываем её и растягиваем доску на всю ширину.
+  const showSidePanel = tab !== "candidates";
 
   return (
     <div>
@@ -51,10 +57,23 @@ export default function RequestTabs({
           </button>
         ))}
       </div>
-      {tab === "overview" && overview}
-      {tab === "questions" && questions}
-      {tab === "candidates" && candidates}
-      {tab === "chat" && showChat && chat}
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: showSidePanel ? "minmax(0, 1fr) 280px" : "minmax(0, 1fr)",
+          gap: 24,
+          alignItems: "start",
+        }}
+      >
+        <div style={{ minWidth: 0 }}>
+          {tab === "overview" && overview}
+          {tab === "questions" && questions}
+          {tab === "candidates" && candidates}
+          {tab === "chat" && showChat && chat}
+        </div>
+        {showSidePanel && sidePanel}
+      </div>
     </div>
   );
 }
