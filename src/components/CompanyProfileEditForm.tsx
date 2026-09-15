@@ -18,6 +18,7 @@ export default function CompanyProfileEditForm({ company }: { company: any }) {
   );
   const [logoData, setLogoData] = useState<string | null>(null);
   const [logoType, setLogoType] = useState<string | null>(null);
+  const [removingLogo, setRemovingLogo] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
   const pickLogo = (file?: File) => {
@@ -41,6 +42,19 @@ export default function CompanyProfileEditForm({ company }: { company: any }) {
     };
     reader.onerror = () => setLogoError("Не удалось прочитать файл");
     reader.readAsDataURL(file);
+  };
+
+  const removeLogo = async () => {
+    if (!confirm("Удалить логотип компании?")) return;
+    setRemovingLogo(true);
+    const res = await fetch("/api/company-profile", { method: "DELETE" });
+    setRemovingLogo(false);
+    if (res.ok) {
+      setLogoPreview(null);
+      setLogoData(null);
+      setLogoType(null);
+      router.refresh();
+    }
   };
 
   const submit = async (e: React.FormEvent) => {
@@ -92,6 +106,11 @@ export default function CompanyProfileEditForm({ company }: { company: any }) {
           <button type="button" className="btn btn-ghost btn-sm" onClick={() => fileInput.current?.click()}>
             {logoPreview ? "Заменить" : "Загрузить логотип"}
           </button>
+          {logoPreview && (
+            <button type="button" className="btn btn-ghost btn-sm" style={{ color: "var(--red)" }} disabled={removingLogo} onClick={removeLogo}>
+              {removingLogo ? "Удаляем…" : "Удалить"}
+            </button>
+          )}
         </div>
         {logoError && <span className="hint" style={{ color: "var(--red)" }}>{logoError}</span>}
         <span className="hint">PNG, JPG или SVG, до 1 МБ. Отображается на публичной странице компании.</span>
