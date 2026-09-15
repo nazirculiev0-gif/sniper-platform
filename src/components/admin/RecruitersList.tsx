@@ -36,7 +36,7 @@ export default function RecruitersList({ recruiters }: { recruiters: any[] }) {
               <td className="mini">{r._count?.candidates ?? 0}</td>
               <td>
                 {r.verified
-                  ? <span className="pill pill-ok">Верифицирован</span>
+                  ? <span className="pill pill-gold">Верифицирован</span>
                   : <span className="pill pill-warn">Не проверен</span>}
               </td>
               <td>
