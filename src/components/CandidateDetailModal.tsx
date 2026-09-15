@@ -56,6 +56,7 @@ const INTERVIEW_STATUS_LABEL: Record<string, { t: string; c: string }> = {
 const DAY_LABELS = ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
 
 type AvailabilitySlot = { dayOfWeek: number; startTime: string; endTime: string };
+type CalendarSlot = { iso: string; date: string; start: string; end: string; busy: boolean };
 
 function fmtSum(n?: number | null) {
   if (!n) return "—";
@@ -124,6 +125,8 @@ export default function CandidateDetailModal({
   const [newLocation, setNewLocation] = useState("");
   const [newNotes, setNewNotes] = useState("");
   const [availSlots, setAvailSlots] = useState<AvailabilitySlot[]>([]);
+  const [calendar, setCalendar] = useState<CalendarSlot[]>([]);
+  const [calendarDay, setCalendarDay] = useState<string | null>(null);
 
   const searchStatus = candidate.searchStatus ? SEARCH_STATUS_LABEL[candidate.searchStatus] : null;
 
@@ -138,8 +141,13 @@ export default function CandidateDetailModal({
       .finally(() => setInterviewsLoading(false));
     if (canEdit) {
       fetch(`/api/candidates/${candidate.id}/availability`)
-        .then((r) => (r.ok ? r.json() : []))
-        .then((data) => setAvailSlots(data));
+        .then((r) => (r.ok ? r.json() : { slots: [], calendar: [] }))
+        .then((data) => {
+          setAvailSlots(data.slots ?? []);
+          setCalendar(data.calendar ?? []);
+          const firstFreeDay = (data.calendar ?? []).find((c: CalendarSlot) => !c.busy)?.date;
+          if (firstFreeDay) setCalendarDay(firstFreeDay);
+        });
     }
   }, [candidate.id, canEdit]);
 
@@ -272,6 +280,7 @@ export default function CandidateDetailModal({
     if (res.ok) {
       const created = await res.json();
       setInterviews((prev) => [created, ...prev]);
+      setCalendar((prev) => prev.map((c) => (c.iso === new Date(newWhen).toISOString() ? { ...c, busy: true } : c)));
       setShowScheduleForm(false);
       setNewWhen("");
       setNewLocation("");
@@ -699,23 +708,76 @@ export default function CandidateDetailModal({
 
               {canEdit && showScheduleForm && (
                 <div className="card card-p" style={{ marginTop: 4 }}>
-                  {availSlots.length > 0 ? (
-                    <div className="hint" style={{ marginBottom: 10 }}>
-                      Работодатель доступен: {availSlots.map((s, i) => (
-                        <span key={i}>{i > 0 ? ", " : ""}{DAY_LABELS[s.dayOfWeek]} {s.startTime}–{s.endTime}</span>
-                      ))}
-                    </div>
+                  {calendar.length > 0 ? (
+                    <>
+                      <div className="hint" style={{ marginBottom: 10 }}>
+                        Занятые часы (уже есть собеседование) отмечены серым и недоступны для выбора.
+                      </div>
+                      <div className="flex gap8" style={{ overflowX: "auto", paddingBottom: 4, marginBottom: 10 }}>
+                        {Array.from(new Set(calendar.map((c) => c.date))).map((date) => {
+                          const d = new Date(date + "T00:00:00");
+                          const hasFree = calendar.some((c) => c.date === date && !c.busy);
+                          return (
+                            <button
+                              key={date}
+                              type="button"
+                              className={`btn btn-sm ${calendarDay === date ? "btn-dark" : "btn-ghost"}`}
+                              style={{ flexShrink: 0, opacity: hasFree ? 1 : 0.5 }}
+                              onClick={() => setCalendarDay(date)}
+                            >
+                              {DAY_LABELS[d.getDay()]} {d.getDate()}.{String(d.getMonth() + 1).padStart(2, "0")}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <div className="flex gap8 wrapf" style={{ marginBottom: 14 }}>
+                        {calendar.filter((c) => c.date === calendarDay).map((c) => {
+                          const selected = newWhen === `${c.date}T${c.start}`;
+                          return (
+                            <button
+                              key={c.iso}
+                              type="button"
+                              disabled={c.busy}
+                              className="btn btn-sm"
+                              style={{
+                                background: c.busy ? "var(--bg2)" : selected ? "var(--red)" : "#fff",
+                                color: c.busy ? "var(--light)" : selected ? "#fff" : "var(--ink)",
+                                border: `1.5px solid ${c.busy ? "var(--line)" : selected ? "var(--red)" : "var(--line)"}`,
+                                textDecoration: c.busy ? "line-through" : "none",
+                                cursor: c.busy ? "not-allowed" : "pointer",
+                              }}
+                              onClick={() => setNewWhen(`${c.date}T${c.start}`)}
+                            >
+                              {c.start}
+                            </button>
+                          );
+                        })}
+                        {calendar.filter((c) => c.date === calendarDay).length === 0 && (
+                          <span className="mini muted">На этот день слотов нет.</span>
+                        )}
+                      </div>
+                    </>
                   ) : (
-                    <div className="hint" style={{ marginBottom: 10 }}>Работодатель ещё не указал доступность — предложите удобное время и уточните в чате.</div>
-                  )}
-                  <label className="fld">
-                    <span>Дата и время <em>*</em></span>
-                    <input className="inp" type="datetime-local" value={newWhen} onChange={(e) => setNewWhen(e.target.value)} />
-                  </label>
-                  {newWhen && availSlots.length > 0 && !isWithinAvailability(newWhen) && (
-                    <div className="mini" style={{ color: "var(--warn)", marginTop: -10, marginBottom: 12 }}>
-                      ⚠ Это время вне обычной доступности работодателя — можно предложить, но лучше уточнить в чате.
-                    </div>
+                    <>
+                      {availSlots.length > 0 ? (
+                        <div className="hint" style={{ marginBottom: 10 }}>
+                          Работодатель доступен: {availSlots.map((s, i) => (
+                            <span key={i}>{i > 0 ? ", " : ""}{DAY_LABELS[s.dayOfWeek]} {s.startTime}–{s.endTime}</span>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="hint" style={{ marginBottom: 10 }}>Работодатель ещё не указал доступность — предложите удобное время и уточните в чате.</div>
+                      )}
+                      <label className="fld">
+                        <span>Дата и время <em>*</em></span>
+                        <input className="inp" type="datetime-local" value={newWhen} onChange={(e) => setNewWhen(e.target.value)} />
+                      </label>
+                      {newWhen && availSlots.length > 0 && !isWithinAvailability(newWhen) && (
+                        <div className="mini" style={{ color: "var(--warn)", marginTop: -10, marginBottom: 12 }}>
+                          ⚠ Это время вне обычной доступности работодателя — можно предложить, но лучше уточнить в чате.
+                        </div>
+                      )}
+                    </>
                   )}
                   <label className="fld">
                     <span>Формат</span>
