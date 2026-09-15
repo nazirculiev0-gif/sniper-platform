@@ -52,7 +52,7 @@ export default async function CompanyPublicProfile({ params }: { params: { id: s
           <div style={{ flex: 1 }}>
             <div className="flex gap8" style={{ alignItems: "center" }}>
               <b className="sg" style={{ fontSize: 18 }}>{company.name}</b>
-              {company.verified && <span className="pill pill-ok">Верифицирована</span>}
+              {company.verified && <span className="pill pill-gold">Верифицирована</span>}
             </div>
             <div className="mini muted" style={{ marginTop: 4 }}>
               {company.industry || "Отрасль не указана"} · Ташкент · на платформе с {fmtDate(company.createdAt)}
@@ -82,7 +82,7 @@ export default async function CompanyPublicProfile({ params }: { params: { id: s
 
       {company.availabilitySlots.length > 0 && (
         <div className="card card-p" style={{ marginBottom: 18 }}>
-          <div className="mini muted" style={{ marginBottom: 8, textTransform: "uppercase", fontSize: 10.5, letterSpacing: ".04em" }}>
+          <div className="mini muted" style={{ marginBottom: 8, fontSize: 11.5, fontWeight: 600 }}>
             Доступность для собеседований
           </div>
           <div className="flex gap8 wrapf">
