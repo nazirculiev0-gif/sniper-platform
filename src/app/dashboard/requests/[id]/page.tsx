@@ -160,29 +160,28 @@ export default async function RequestDetailPage({ params }: { params: { id: stri
         Опубликовано {fmtDate(request.createdAt)} · ЗП {fmtSum(request.salaryFrom)} – {fmtSum(request.salaryTo)}
       </div>
 
-      <div className="request-layout" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) 280px", gap: 24, alignItems: "start" }}>
-        <RequestTabs
-          overview={overview}
-          questions={questions}
-          questionsCount={0}
-          candidates={candidates}
-          candidatesCount={request.candidates.length}
-          chat={chat}
-          showChat={!!showChat}
-        />
-
-        <RequestSidePanel
-          requestId={request.id}
-          rewardGross={request.rewardGross}
-          exclusiveDays={request.exclusiveDays}
-          claimedAt={request.claimedAt?.toISOString() ?? null}
-          claimDeadline={request.claimDeadline?.toISOString() ?? null}
-          createdAt={request.createdAt.toISOString()}
-          participants={JSON.parse(JSON.stringify(request.participants))}
-          status={request.status}
-          canSimulate={user.role === "EMPLOYER" || isParticipant}
-        />
-      </div>
+      <RequestTabs
+        overview={overview}
+        questions={questions}
+        questionsCount={0}
+        candidates={candidates}
+        candidatesCount={request.candidates.length}
+        chat={chat}
+        showChat={!!showChat}
+        sidePanel={
+          <RequestSidePanel
+            requestId={request.id}
+            rewardGross={request.rewardGross}
+            exclusiveDays={request.exclusiveDays}
+            claimedAt={request.claimedAt?.toISOString() ?? null}
+            claimDeadline={request.claimDeadline?.toISOString() ?? null}
+            createdAt={request.createdAt.toISOString()}
+            participants={JSON.parse(JSON.stringify(request.participants))}
+            status={request.status}
+            canSimulate={user.role === "EMPLOYER" || isParticipant}
+          />
+        }
+      />
 
       {user.role === "EMPLOYER" && request.status === "FILLED" && request.payout && (
         <div style={{ marginTop: 24 }}>
