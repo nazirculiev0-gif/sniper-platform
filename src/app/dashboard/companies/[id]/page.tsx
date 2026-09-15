@@ -58,7 +58,7 @@ export default async function CompanyPublicProfile({ params }: { params: { id: s
             <img
               src={`data:${company.logoType || "image/png"};base64,${company.logoData}`}
               alt={company.name}
-              style={{ width: 56, height: 56, borderRadius: 14, objectFit: "cover", border: "1px solid var(--line)" }}
+              style={{ width: 56, height: 56, borderRadius: 14, objectFit: "contain", border: "1px solid var(--line)", background: "#fff", padding: 4 }}
             />
           ) : (
             <div className="av" style={{ width: 56, height: 56, fontSize: 20, background: "var(--dark)" }}>
